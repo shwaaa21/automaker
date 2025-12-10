@@ -265,22 +265,6 @@ class CodexProvider extends ModelProvider {
         provider: 'codex',
         description: 'Broad world knowledge with strong reasoning',
         tier: 'standard'
-      },
-      {
-        id: 'o3',
-        name: 'O3',
-        modelString: 'o3',
-        provider: 'codex',
-        description: 'Advanced reasoning model',
-        tier: 'premium'
-      },
-      {
-        id: 'o3-mini',
-        name: 'O3 Mini',
-        modelString: 'o3-mini',
-        provider: 'codex',
-        description: 'Efficient reasoning model',
-        tier: 'standard'
       }
     ];
   }
@@ -306,12 +290,7 @@ class CodexProvider extends ModelProvider {
       'gpt-5.1-codex-max': 'gpt-5.1-codex-max',
       'gpt-5.1-codex': 'gpt-5.1-codex',
       'gpt-5.1-codex-mini': 'gpt-5.1-codex-mini',
-      'gpt-5.1': 'gpt-5.1',
-      'o3': 'o3',
-      'o3-mini': 'o3-mini',
-      'o4-mini': 'o4-mini',
-      'gpt-4o': 'gpt-4o',
-      'gpt-4o-mini': 'gpt-4o-mini'
+      'gpt-5.1': 'gpt-5.1'
     };
     return modelMap[modelKey] || 'gpt-5.1-codex-max';
   }
@@ -346,8 +325,7 @@ class ModelProviderFactory {
 
     // Check if it's a Codex/OpenAI model
     const codexModels = [
-      'gpt-5.1-codex-max', 'gpt-5.1-codex', 'gpt-5.1-codex-mini', 'gpt-5.1',
-      'o3', 'o3-mini', 'o4-mini', 'gpt-4o', 'gpt-4o-mini'
+      'gpt-5.1-codex-max', 'gpt-5.1-codex', 'gpt-5.1-codex-mini', 'gpt-5.1'
     ];
     if (codexModels.includes(modelId)) {
       return new CodexProvider();

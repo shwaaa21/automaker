@@ -212,10 +212,7 @@ class CodexCliDetector {
       'gpt-5.1-codex-max',
       'gpt-5.1-codex',
       'gpt-5.1-codex-mini',
-      'gpt-5.1',
-      'o3',
-      'o3-mini',
-      'o4-mini'
+      'gpt-5.1'
     ];
     return supportedModels.includes(model);
   }

@@ -36,8 +36,27 @@ class FeatureExecutor {
     const modelKey = feature.model || "opus"; // Default to opus
 
     // Use the registry for model lookup
-    const modelString = ModelRegistry.getModelString(modelKey);
-    return modelString || MODEL_MAP[modelKey] || MODEL_MAP.opus;
+    let modelString = ModelRegistry.getModelString(modelKey);
+    
+    // Fallback to MODEL_MAP if registry doesn't have it
+    if (!modelString || modelString === modelKey) {
+      modelString = MODEL_MAP[modelKey];
+    }
+    
+    // Final fallback to opus
+    if (!modelString) {
+      modelString = MODEL_MAP.opus;
+    }
+    
+    // Validate model string format - ensure it's not incorrectly constructed
+    // Prevent incorrect formats like "claude-haiku-4-20250514" (mixing haiku with sonnet date)
+    if (modelString.includes('haiku') && modelString.includes('20250514')) {
+      console.error(`[FeatureExecutor] Invalid model string detected: ${modelString}, using correct format`);
+      modelString = MODEL_MAP.haiku || 'claude-haiku-4-5';
+    }
+    
+    console.log(`[FeatureExecutor] getModelString: modelKey=${modelKey}, modelString=${modelString}`);
+    return modelString;
   }
 
   /**

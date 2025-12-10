@@ -88,5 +88,57 @@
     "imagePaths": [],
     "skipTests": false,
     "summary": "Added model selection (Haiku/Sonnet/Opus) and thinking level (None/Low/Medium/High) controls to feature creation and edit dialogs. Modified: app-store.ts (added AgentModel and ThinkingLevel types), board-view.tsx (UI controls), feature-executor.js (dynamic model/thinking config), feature-loader.js (field persistence). Agent now executes with user-selected model and extended thinking settings."
+  },
+  {
+    "id": "feature-1765332414638-8jt9o8v06",
+    "category": "Kanban",
+    "description": "I want you to refactor the add new feature modal there are to many settings going on and its hard / annoyig to navigate lets split the settings in modal into tabs \nprompt icon - prompt and category\ngear icon - model and thinking ( here i would also like to split somehow the claude with thinking and codex that dont use it )\ntest icon - skip automated testing and verification steps\n",
+    "steps": [],
+    "status": "waiting_approval",
+    "startedAt": "2025-12-10T02:17:18.943Z",
+    "imagePaths": [],
+    "skipTests": true,
+    "summary": "Made model selection buttons compact. Removed descriptions and badges from cards, now shows short model names (Haiku, Sonnet, Opus, Max, Codex, Mini) in horizontal row. Full description available on hover. Modified: board-view.tsx (renderModelOptions function).",
+    "model": "opus",
+    "thinkingLevel": "high"
+  },
+  {
+    "id": "feature-1765333519168-1z97a3dcq",
+    "category": "Uncategorized",
+    "description": "Make the add new feature modal widther ",
+    "steps": [],
+    "status": "waiting_approval",
+    "startedAt": "2025-12-10T02:25:21.328Z",
+    "imagePaths": [
+      {
+        "id": "img-1765333063064-qygrbjul4",
+        "path": "/var/folders/lh/zcj91n9j4vj4_wg8jsvpqr9m0000gn/T/automaker-images/1765333063058_SCR-20251210-dseh.png",
+        "filename": "SCR-20251210-dseh.png",
+        "mimeType": "image/png"
+      }
+    ],
+    "skipTests": true,
+    "summary": "Increased dialog max-width from max-w-md/max-w-lg to max-w-2xl. Modified: app/src/components/ui/dialog.tsx. This makes the add new feature modal and all other dialogs wider (from 448-512px to 672px) for better content display.",
+    "model": "haiku",
+    "thinkingLevel": "none"
+  },
+  {
+    "id": "feature-1765333578668-qbzk7xihs",
+    "category": "Uncategorized",
+    "description": "For example i got haiku model running or codex one but we can still see opus 4.5 check if it not hardcoded and fix it to use proper model name that was used in this task",
+    "steps": [],
+    "status": "in_progress",
+    "startedAt": "2025-12-10T02:26:22.286Z",
+    "imagePaths": [
+      {
+        "id": "img-1765333541510-3khezepr2",
+        "path": "/var/folders/lh/zcj91n9j4vj4_wg8jsvpqr9m0000gn/T/automaker-images/1765333541508_SCR-20251210-duzr.png",
+        "filename": "SCR-20251210-duzr.png",
+        "mimeType": "image/png"
+      }
+    ],
+    "skipTests": true,
+    "model": "gpt-5.1-codex",
+    "thinkingLevel": "none"
   }
 ]

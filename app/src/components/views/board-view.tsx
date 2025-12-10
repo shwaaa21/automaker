@@ -50,6 +50,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { KanbanColumn } from "./kanban-column";
 import { KanbanCard } from "./kanban-card";
 import { AutoModeLog } from "./auto-mode-log";
@@ -71,6 +72,7 @@ import {
   GitCommit,
   Brain,
   Zap,
+  Settings2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Slider } from "@/components/ui/slider";
@@ -151,13 +153,6 @@ const CODEX_MODELS: ModelOption[] = [
     label: "GPT-5.1",
     description: "General-purpose reasoning with solid coding ability.",
     badge: "General",
-    provider: "codex",
-  },
-  {
-    id: "o3",
-    label: "OpenAI O3",
-    description: "Reasoning-focused model for tricky problems.",
-    badge: "Reasoning",
     provider: "codex",
   },
 ];
@@ -1192,49 +1187,29 @@ export function BoardView() {
     onSelect: (model: AgentModel) => void,
     testIdPrefix = "model-select"
   ) => (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+    <div className="flex gap-2 flex-wrap">
       {options.map((option) => {
         const isSelected = selectedModel === option.id;
         const isCodex = option.provider === "codex";
+        // Shorter display names for compact view
+        const shortName = option.label.replace("Claude ", "").replace("GPT-5.1 Codex ", "").replace("GPT-5.1 ", "");
         return (
           <button
             key={option.id}
             type="button"
             onClick={() => onSelect(option.id)}
+            title={option.description}
             className={cn(
-              "w-full rounded-lg border p-3 text-left transition-all",
-              "hover:-translate-y-[1px] hover:shadow-sm",
+              "flex-1 min-w-[80px] px-3 py-2 rounded-md border text-sm font-medium transition-colors",
               isSelected
                 ? isCodex
-                  ? "border-emerald-500 bg-emerald-600 text-white shadow-sm"
-                  : "border-primary bg-primary text-primary-foreground shadow-sm"
-                : "border-input bg-background hover:border-primary/40"
+                  ? "bg-emerald-600 text-white border-emerald-500"
+                  : "bg-primary text-primary-foreground border-primary"
+                : "bg-background hover:bg-accent border-input"
             )}
             data-testid={`${testIdPrefix}-${option.id}`}
           >
-            <div className="flex items-center justify-between gap-2">
-              <span className="font-semibold text-sm">{option.label}</span>
-              {option.badge && (
-                <span
-                  className={cn(
-                    "text-[11px] uppercase tracking-wide px-2 py-0.5 rounded-full border",
-                    isSelected
-                      ? "border-primary-foreground/60 bg-primary-foreground/15 text-primary-foreground"
-                      : isCodex
-                        ? "border-emerald-500/60 text-emerald-700 dark:text-emerald-200"
-                        : "border-primary/50 text-primary"
-                  )}
-                >
-                  {option.badge}
-                </span>
-              )}
-            </div>
-            <p className={cn(
-              "text-xs leading-snug mt-1",
-              isSelected ? "text-primary-foreground/90" : "text-muted-foreground"
-            )}>
-              {option.description}
-            </p>
+            {shortName}
           </button>
         );
       })}
@@ -1506,63 +1481,61 @@ export function BoardView() {
               Create a new feature card for the Kanban board.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4 overflow-y-auto flex-1 min-h-0">
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <DescriptionImageDropZone
-                value={newFeature.description}
-                onChange={(value) =>
-                  setNewFeature({ ...newFeature, description: value })
-                }
-                images={newFeature.imagePaths}
-                onImagesChange={(images) =>
-                  setNewFeature({ ...newFeature, imagePaths: images })
-                }
-                placeholder="Describe the feature..."
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="category">Category (optional)</Label>
-              <CategoryAutocomplete
-                value={newFeature.category}
-                onChange={(value) =>
-                  setNewFeature({ ...newFeature, category: value })
-                }
-                suggestions={categorySuggestions}
-                placeholder="e.g., Core, UI, API"
-                data-testid="feature-category-input"
-              />
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="skip-tests"
-                checked={newFeature.skipTests}
-                onCheckedChange={(checked) =>
-                  setNewFeature({ ...newFeature, skipTests: checked === true })
-                }
-                data-testid="skip-tests-checkbox"
-              />
-              <div className="flex items-center gap-2">
-                <Label htmlFor="skip-tests" className="text-sm cursor-pointer">
-                  Skip automated testing
-                </Label>
-                <FlaskConical className="w-3.5 h-3.5 text-muted-foreground" />
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground mb-4">
-              When enabled, this feature will require manual verification
-              instead of automated TDD.
-            </p>
-
-            {/* Model Selection */}
-            <div className="space-y-3">
-              <Label className="flex items-center gap-2">
-                <Zap className="w-4 h-4 text-muted-foreground" />
+          <Tabs defaultValue="prompt" className="py-4 flex-1 min-h-0 flex flex-col">
+            <TabsList className="w-full grid grid-cols-3 mb-4">
+              <TabsTrigger value="prompt" data-testid="tab-prompt">
+                <MessageSquare className="w-4 h-4 mr-2" />
+                Prompt
+              </TabsTrigger>
+              <TabsTrigger value="model" data-testid="tab-model">
+                <Settings2 className="w-4 h-4 mr-2" />
                 Model
-              </Label>
+              </TabsTrigger>
+              <TabsTrigger value="testing" data-testid="tab-testing">
+                <FlaskConical className="w-4 h-4 mr-2" />
+                Testing
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Prompt Tab */}
+            <TabsContent value="prompt" className="space-y-4 overflow-y-auto">
               <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <DescriptionImageDropZone
+                  value={newFeature.description}
+                  onChange={(value) =>
+                    setNewFeature({ ...newFeature, description: value })
+                  }
+                  images={newFeature.imagePaths}
+                  onImagesChange={(images) =>
+                    setNewFeature({ ...newFeature, imagePaths: images })
+                  }
+                  placeholder="Describe the feature..."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="category">Category (optional)</Label>
+                <CategoryAutocomplete
+                  value={newFeature.category}
+                  onChange={(value) =>
+                    setNewFeature({ ...newFeature, category: value })
+                  }
+                  suggestions={categorySuggestions}
+                  placeholder="e.g., Core, UI, API"
+                  data-testid="feature-category-input"
+                />
+              </div>
+            </TabsContent>
+
+            {/* Model Tab */}
+            <TabsContent value="model" className="space-y-4 overflow-y-auto">
+              {/* Claude Models Section */}
+              <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs text-muted-foreground font-medium">Claude (SDK)</p>
+                  <Label className="flex items-center gap-2">
+                    <Brain className="w-4 h-4 text-primary" />
+                    Claude (SDK)
+                  </Label>
                   <span className="text-[11px] px-2 py-0.5 rounded-full border border-primary/40 text-primary">
                     Native
                   </span>
@@ -1579,13 +1552,61 @@ export function BoardView() {
                         : "none",
                     })
                 )}
+
+                {/* Thinking Level - Only shown when Claude model is selected */}
+                {newModelAllowsThinking && (
+                  <div className="space-y-2 pt-2 border-t border-border">
+                    <Label className="flex items-center gap-2 text-sm">
+                      <Brain className="w-3.5 h-3.5 text-muted-foreground" />
+                      Thinking Level
+                    </Label>
+                    <div className="flex gap-2 flex-wrap">
+                      {(["none", "low", "medium", "high", "ultrathink"] as ThinkingLevel[]).map((level) => (
+                        <button
+                          key={level}
+                          type="button"
+                          onClick={() => {
+                            setNewFeature({ ...newFeature, thinkingLevel: level });
+                            if (level === "ultrathink") {
+                              toast.warning("Ultrathink Selected", {
+                                description: "Ultrathink uses extensive reasoning (45-180s, ~$0.48/task). Best for complex architecture, migrations, or debugging.",
+                                duration: 5000
+                              });
+                            }
+                          }}
+                          className={cn(
+                            "flex-1 px-3 py-2 rounded-md border text-sm font-medium transition-colors min-w-[60px]",
+                            newFeature.thinkingLevel === level
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "bg-background hover:bg-accent border-input"
+                          )}
+                          data-testid={`thinking-level-${level}`}
+                        >
+                          {level === "none" && "None"}
+                          {level === "low" && "Low"}
+                          {level === "medium" && "Med"}
+                          {level === "high" && "High"}
+                          {level === "ultrathink" && "Ultra"}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Higher levels give more time to reason through complex problems.
+                    </p>
+                  </div>
+                )}
               </div>
 
-              <div className="space-y-2">
+              {/* Separator */}
+              <div className="border-t border-border" />
+
+              {/* Codex Models Section */}
+              <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs text-muted-foreground font-medium">
+                  <Label className="flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-emerald-500" />
                     OpenAI via Codex CLI
-                  </p>
+                  </Label>
                   <span className="text-[11px] px-2 py-0.5 rounded-full border border-emerald-500/50 text-emerald-600 dark:text-emerald-300">
                     CLI
                   </span>
@@ -1597,99 +1618,76 @@ export function BoardView() {
                     setNewFeature({
                       ...newFeature,
                       model,
-                      thinkingLevel: modelSupportsThinking(model)
-                        ? newFeature.thinkingLevel
-                        : "none",
+                      thinkingLevel: "none",
                     })
                 )}
+                <p className="text-xs text-muted-foreground">
+                  Codex models do not support thinking levels.
+                </p>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Claude models use the Claude SDK. OpenAI models run through the Codex CLI.
-                {!newModelAllowsThinking && (
-                  <span className="block mt-1 text-amber-600 dark:text-amber-400">
-                    Thinking controls are hidden for Codex CLI models.
-                  </span>
-                )}
-              </p>
-            </div>
+            </TabsContent>
 
-            {/* Thinking Level - Hidden for Codex models */}
-            {newModelAllowsThinking && (
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <Brain className="w-4 h-4 text-muted-foreground" />
-                Thinking Level
-              </Label>
-              <div className="flex gap-2 flex-wrap">
-                {(["none", "low", "medium", "high", "ultrathink"] as ThinkingLevel[]).map((level) => (
-                  <button
-                    key={level}
-                    type="button"
-                    onClick={() => {
-                      setNewFeature({ ...newFeature, thinkingLevel: level });
-                      if (level === "ultrathink") {
-                        toast.warning("Ultrathink Selected", {
-                          description: "Ultrathink uses extensive reasoning (45-180s, ~$0.48/task). Best for complex architecture, migrations, or debugging.",
-                          duration: 5000
-                        });
-                      }
-                    }}
-                    className={cn(
-                      "flex-1 px-3 py-2 rounded-md border text-sm font-medium transition-colors min-w-[80px]",
-                      newFeature.thinkingLevel === level
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "bg-background hover:bg-accent border-input"
-                    )}
-                    data-testid={`thinking-level-${level}`}
-                  >
-                    {level === "none" && "None"}
-                    {level === "low" && "Low"}
-                    {level === "medium" && "Med"}
-                    {level === "high" && "High"}
-                    {level === "ultrathink" && "Ultra"}
-                  </button>
-                ))}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Higher thinking levels give the model more time to reason through complex problems.
-              </p>
-            </div>
-            )}
-
-            {/* Verification Steps - Only shown when skipTests is enabled */}
-            {newFeature.skipTests && (
-              <div className="space-y-2">
-                <Label>Verification Steps</Label>
-                {newFeature.steps.map((step, index) => (
-                  <Input
-                    key={index}
-                    placeholder={`Verification step ${index + 1}`}
-                    value={step}
-                    onChange={(e) => {
-                      const steps = [...newFeature.steps];
-                      steps[index] = e.target.value;
-                      setNewFeature({ ...newFeature, steps });
-                    }}
-                    data-testid={`feature-step-${index}-input`}
-                  />
-                ))}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setNewFeature({
-                      ...newFeature,
-                      steps: [...newFeature.steps, ""],
-                    })
+            {/* Testing Tab */}
+            <TabsContent value="testing" className="space-y-4 overflow-y-auto">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="skip-tests"
+                  checked={newFeature.skipTests}
+                  onCheckedChange={(checked) =>
+                    setNewFeature({ ...newFeature, skipTests: checked === true })
                   }
-                  data-testid="add-step-button"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Verification Step
-                </Button>
+                  data-testid="skip-tests-checkbox"
+                />
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="skip-tests" className="text-sm cursor-pointer">
+                    Skip automated testing
+                  </Label>
+                  <FlaskConical className="w-3.5 h-3.5 text-muted-foreground" />
+                </div>
               </div>
-            )}
-          </div>
+              <p className="text-xs text-muted-foreground">
+                When enabled, this feature will require manual verification
+                instead of automated TDD.
+              </p>
+
+              {/* Verification Steps - Only shown when skipTests is enabled */}
+              {newFeature.skipTests && (
+                <div className="space-y-2 pt-2 border-t border-border">
+                  <Label>Verification Steps</Label>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Add manual steps to verify this feature works correctly.
+                  </p>
+                  {newFeature.steps.map((step, index) => (
+                    <Input
+                      key={index}
+                      placeholder={`Verification step ${index + 1}`}
+                      value={step}
+                      onChange={(e) => {
+                        const steps = [...newFeature.steps];
+                        steps[index] = e.target.value;
+                        setNewFeature({ ...newFeature, steps });
+                      }}
+                      data-testid={`feature-step-${index}-input`}
+                    />
+                  ))}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setNewFeature({
+                        ...newFeature,
+                        steps: [...newFeature.steps, ""],
+                      })
+                    }
+                    data-testid="add-step-button"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Verification Step
+                  </Button>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setShowAddDialog(false)}>
               Cancel
@@ -1722,73 +1720,65 @@ export function BoardView() {
             <DialogDescription>Modify the feature details.</DialogDescription>
           </DialogHeader>
           {editingFeature && (
-            <div className="space-y-4 py-4 overflow-y-auto flex-1 min-h-0">
-              <div className="space-y-2">
-                <Label htmlFor="edit-description">Description</Label>
-                <Textarea
-                  id="edit-description"
-                  placeholder="Describe the feature..."
-                  value={editingFeature.description}
-                  onChange={(e) =>
-                    setEditingFeature({
-                      ...editingFeature,
-                      description: e.target.value,
-                    })
-                  }
-                  data-testid="edit-feature-description"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-category">Category (optional)</Label>
-                <CategoryAutocomplete
-                  value={editingFeature.category}
-                  onChange={(value) =>
-                    setEditingFeature({
-                      ...editingFeature,
-                      category: value,
-                    })
-                  }
-                  suggestions={categorySuggestions}
-                  placeholder="e.g., Core, UI, API"
-                  data-testid="edit-feature-category"
-                />
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="edit-skip-tests"
-                  checked={editingFeature.skipTests ?? false}
-                  onCheckedChange={(checked) =>
-                    setEditingFeature({
-                      ...editingFeature,
-                      skipTests: checked === true,
-                    })
-                  }
-                  data-testid="edit-skip-tests-checkbox"
-                />
-                <div className="flex items-center gap-2">
-                  <Label
-                    htmlFor="edit-skip-tests"
-                    className="text-sm cursor-pointer"
-                  >
-                    Skip automated testing
-                  </Label>
-                  <FlaskConical className="w-3.5 h-3.5 text-muted-foreground" />
-                </div>
-              </div>
-              <p className="text-xs text-muted-foreground mb-4">
-                When enabled, this feature will require manual verification
-                instead of automated TDD.
-              </p>
-
-              {/* Model Selection */}
-              <div className="space-y-3">
-                <Label className="flex items-center gap-2">
-                  <Zap className="w-4 h-4 text-muted-foreground" />
+            <Tabs defaultValue="prompt" className="py-4 flex-1 min-h-0 flex flex-col">
+              <TabsList className="w-full grid grid-cols-3 mb-4">
+                <TabsTrigger value="prompt" data-testid="edit-tab-prompt">
+                  <MessageSquare className="w-4 h-4 mr-2" />
+                  Prompt
+                </TabsTrigger>
+                <TabsTrigger value="model" data-testid="edit-tab-model">
+                  <Settings2 className="w-4 h-4 mr-2" />
                   Model
-                </Label>
+                </TabsTrigger>
+                <TabsTrigger value="testing" data-testid="edit-tab-testing">
+                  <FlaskConical className="w-4 h-4 mr-2" />
+                  Testing
+                </TabsTrigger>
+              </TabsList>
+
+              {/* Prompt Tab */}
+              <TabsContent value="prompt" className="space-y-4 overflow-y-auto">
                 <div className="space-y-2">
+                  <Label htmlFor="edit-description">Description</Label>
+                  <Textarea
+                    id="edit-description"
+                    placeholder="Describe the feature..."
+                    value={editingFeature.description}
+                    onChange={(e) =>
+                      setEditingFeature({
+                        ...editingFeature,
+                        description: e.target.value,
+                      })
+                    }
+                    data-testid="edit-feature-description"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-category">Category (optional)</Label>
+                  <CategoryAutocomplete
+                    value={editingFeature.category}
+                    onChange={(value) =>
+                      setEditingFeature({
+                        ...editingFeature,
+                        category: value,
+                      })
+                    }
+                    suggestions={categorySuggestions}
+                    placeholder="e.g., Core, UI, API"
+                    data-testid="edit-feature-category"
+                  />
+                </div>
+              </TabsContent>
+
+              {/* Model Tab */}
+              <TabsContent value="model" className="space-y-4 overflow-y-auto">
+                {/* Claude Models Section */}
+                <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <p className="text-xs text-muted-foreground font-medium">Claude (SDK)</p>
+                    <Label className="flex items-center gap-2">
+                      <Brain className="w-4 h-4 text-primary" />
+                      Claude (SDK)
+                    </Label>
                     <span className="text-[11px] px-2 py-0.5 rounded-full border border-primary/40 text-primary">
                       Native
                     </span>
@@ -1806,13 +1796,61 @@ export function BoardView() {
                       }),
                     "edit-model-select"
                   )}
+
+                  {/* Thinking Level - Only shown when Claude model is selected */}
+                  {editModelAllowsThinking && (
+                    <div className="space-y-2 pt-2 border-t border-border">
+                      <Label className="flex items-center gap-2 text-sm">
+                        <Brain className="w-3.5 h-3.5 text-muted-foreground" />
+                        Thinking Level
+                      </Label>
+                      <div className="flex gap-2 flex-wrap">
+                        {(["none", "low", "medium", "high", "ultrathink"] as ThinkingLevel[]).map((level) => (
+                          <button
+                            key={level}
+                            type="button"
+                            onClick={() => {
+                              setEditingFeature({ ...editingFeature, thinkingLevel: level });
+                              if (level === "ultrathink") {
+                                toast.warning("Ultrathink Selected", {
+                                  description: "Ultrathink uses extensive reasoning (45-180s, ~$0.48/task). Best for complex architecture, migrations, or debugging.",
+                                  duration: 5000
+                                });
+                              }
+                            }}
+                            className={cn(
+                              "flex-1 px-3 py-2 rounded-md border text-sm font-medium transition-colors min-w-[60px]",
+                              (editingFeature.thinkingLevel ?? "none") === level
+                                ? "bg-primary text-primary-foreground border-primary"
+                                : "bg-background hover:bg-accent border-input"
+                            )}
+                            data-testid={`edit-thinking-level-${level}`}
+                          >
+                            {level === "none" && "None"}
+                            {level === "low" && "Low"}
+                            {level === "medium" && "Med"}
+                            {level === "high" && "High"}
+                            {level === "ultrathink" && "Ultra"}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Higher levels give more time to reason through complex problems.
+                      </p>
+                    </div>
+                  )}
                 </div>
 
-                <div className="space-y-2">
+                {/* Separator */}
+                <div className="border-t border-border" />
+
+                {/* Codex Models Section */}
+                <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <p className="text-xs text-muted-foreground font-medium">
+                    <Label className="flex items-center gap-2">
+                      <Zap className="w-4 h-4 text-emerald-500" />
                       OpenAI via Codex CLI
-                    </p>
+                    </Label>
                     <span className="text-[11px] px-2 py-0.5 rounded-full border border-emerald-500/50 text-emerald-600 dark:text-emerald-300">
                       CLI
                     </span>
@@ -1824,99 +1862,82 @@ export function BoardView() {
                       setEditingFeature({
                         ...editingFeature,
                         model,
-                        thinkingLevel: modelSupportsThinking(model)
-                          ? editingFeature.thinkingLevel
-                          : "none",
+                        thinkingLevel: "none",
                       }),
                     "edit-model-select"
                   )}
+                  <p className="text-xs text-muted-foreground">
+                    Codex models do not support thinking levels.
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Claude models use the Claude SDK. OpenAI models run through the Codex CLI.
-                  {!editModelAllowsThinking && (
-                    <span className="block mt-1 text-amber-600 dark:text-amber-400">
-                      Thinking controls are hidden for Codex CLI models.
-                    </span>
-                  )}
-                </p>
-              </div>
+              </TabsContent>
 
-              {/* Thinking Level - Hidden for Codex models */}
-              {editModelAllowsThinking && (
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <Brain className="w-4 h-4 text-muted-foreground" />
-                  Thinking Level
-                </Label>
-                <div className="flex gap-2 flex-wrap">
-                  {(["none", "low", "medium", "high", "ultrathink"] as ThinkingLevel[]).map((level) => (
-                    <button
-                      key={level}
-                      type="button"
-                      onClick={() => {
-                        setEditingFeature({ ...editingFeature, thinkingLevel: level });
-                        if (level === "ultrathink") {
-                          toast.warning("Ultrathink Selected", {
-                            description: "Ultrathink uses extensive reasoning (45-180s, ~$0.48/task). Best for complex architecture, migrations, or debugging.",
-                            duration: 5000
-                          });
-                        }
-                      }}
-                      className={cn(
-                        "flex-1 px-3 py-2 rounded-md border text-sm font-medium transition-colors min-w-[80px]",
-                        (editingFeature.thinkingLevel ?? "none") === level
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : "bg-background hover:bg-accent border-input"
-                      )}
-                      data-testid={`edit-thinking-level-${level}`}
-                    >
-                      {level === "none" && "None"}
-                      {level === "low" && "Low"}
-                      {level === "medium" && "Med"}
-                      {level === "high" && "High"}
-                      {level === "ultrathink" && "Ultra"}
-                    </button>
-                  ))}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Higher thinking levels give the model more time to reason through complex problems.
-                </p>
-              </div>
-              )}
-
-              {/* Verification Steps - Only shown when skipTests is enabled */}
-              {editingFeature.skipTests && (
-                <div className="space-y-2">
-                  <Label>Verification Steps</Label>
-                  {editingFeature.steps.map((step, index) => (
-                    <Input
-                      key={index}
-                      value={step}
-                      placeholder={`Verification step ${index + 1}`}
-                      onChange={(e) => {
-                        const steps = [...editingFeature.steps];
-                        steps[index] = e.target.value;
-                        setEditingFeature({ ...editingFeature, steps });
-                      }}
-                      data-testid={`edit-feature-step-${index}`}
-                    />
-                  ))}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
+              {/* Testing Tab */}
+              <TabsContent value="testing" className="space-y-4 overflow-y-auto">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="edit-skip-tests"
+                    checked={editingFeature.skipTests ?? false}
+                    onCheckedChange={(checked) =>
                       setEditingFeature({
                         ...editingFeature,
-                        steps: [...editingFeature.steps, ""],
+                        skipTests: checked === true,
                       })
                     }
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Verification Step
-                  </Button>
+                    data-testid="edit-skip-tests-checkbox"
+                  />
+                  <div className="flex items-center gap-2">
+                    <Label
+                      htmlFor="edit-skip-tests"
+                      className="text-sm cursor-pointer"
+                    >
+                      Skip automated testing
+                    </Label>
+                    <FlaskConical className="w-3.5 h-3.5 text-muted-foreground" />
+                  </div>
                 </div>
-              )}
-            </div>
+                <p className="text-xs text-muted-foreground">
+                  When enabled, this feature will require manual verification
+                  instead of automated TDD.
+                </p>
+
+                {/* Verification Steps - Only shown when skipTests is enabled */}
+                {editingFeature.skipTests && (
+                  <div className="space-y-2 pt-2 border-t border-border">
+                    <Label>Verification Steps</Label>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Add manual steps to verify this feature works correctly.
+                    </p>
+                    {editingFeature.steps.map((step, index) => (
+                      <Input
+                        key={index}
+                        value={step}
+                        placeholder={`Verification step ${index + 1}`}
+                        onChange={(e) => {
+                          const steps = [...editingFeature.steps];
+                          steps[index] = e.target.value;
+                          setEditingFeature({ ...editingFeature, steps });
+                        }}
+                        data-testid={`edit-feature-step-${index}`}
+                      />
+                    ))}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setEditingFeature({
+                          ...editingFeature,
+                          steps: [...editingFeature.steps, ""],
+                        })
+                      }
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Verification Step
+                    </Button>
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
           )}
           <DialogFooter>
             <Button variant="ghost" onClick={() => setEditingFeature(null)}>

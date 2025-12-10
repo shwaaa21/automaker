@@ -27,12 +27,7 @@ const CODEX_MODEL_IDS = [
   'gpt-5.1-codex-max',
   'gpt-5.1-codex',
   'gpt-5.1-codex-mini',
-  'gpt-5.1',
-  'o3',
-  'o3-mini',
-  'o4-mini',
-  'gpt-4o',
-  'gpt-4o-mini'
+  'gpt-5.1'
 ];
 
 /**
@@ -138,50 +133,6 @@ const MODELS = {
     description: 'Broad world knowledge with strong reasoning',
     capabilities: ['code', 'text', 'reasoning'],
     maxTokens: 32768,
-    contextWindow: 128000,
-    supportsThinking: false,
-    requiresAuth: 'OPENAI_API_KEY'
-  },
-
-  // OpenAI O-Series Models
-  o3: {
-    id: 'o3',
-    name: 'O3',
-    modelString: 'o3',
-    provider: 'codex',
-    category: MODEL_CATEGORIES.OPENAI,
-    tier: MODEL_TIERS.PREMIUM,
-    description: 'Advanced reasoning model',
-    capabilities: ['code', 'text', 'tools', 'reasoning'],
-    maxTokens: 100000,
-    contextWindow: 200000,
-    supportsThinking: false,
-    requiresAuth: 'OPENAI_API_KEY'
-  },
-  'o3-mini': {
-    id: 'o3-mini',
-    name: 'O3 Mini',
-    modelString: 'o3-mini',
-    provider: 'codex',
-    category: MODEL_CATEGORIES.OPENAI,
-    tier: MODEL_TIERS.STANDARD,
-    description: 'Efficient reasoning model',
-    capabilities: ['code', 'text', 'reasoning'],
-    maxTokens: 65536,
-    contextWindow: 128000,
-    supportsThinking: false,
-    requiresAuth: 'OPENAI_API_KEY'
-  },
-  'o4-mini': {
-    id: 'o4-mini',
-    name: 'O4 Mini',
-    modelString: 'o4-mini',
-    provider: 'codex',
-    category: MODEL_CATEGORIES.OPENAI,
-    tier: MODEL_TIERS.BASIC,
-    description: 'Fast reasoning with lower cost',
-    capabilities: ['code', 'text', 'reasoning'],
-    maxTokens: 65536,
     contextWindow: 128000,
     supportsThinking: false,
     requiresAuth: 'OPENAI_API_KEY'
