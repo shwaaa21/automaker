@@ -69,17 +69,20 @@ export function useCliStatus() {
           const result = await api.setup.getClaudeStatus();
           if (result.success && result.auth) {
             const auth = result.auth;
+            // Validate method is one of the expected values, default to "none"
+            const validMethods = ["oauth_token_env", "oauth_token", "api_key", "api_key_env", "none"] as const;
+            type AuthMethod = typeof validMethods[number];
+            const method: AuthMethod = validMethods.includes(auth.method as AuthMethod)
+              ? (auth.method as AuthMethod)
+              : "none";
             const authStatus = {
               authenticated: auth.authenticated,
-              method:
-                auth.method === "oauth_token"
-                  ? ("oauth" as const)
-                  : auth.method?.includes("api_key")
-                  ? ("api_key" as const)
-                  : ("none" as const),
+              method,
               hasCredentialsFile: auth.hasCredentialsFile ?? false,
-              oauthTokenValid: auth.hasStoredOAuthToken,
+              oauthTokenValid: auth.hasStoredOAuthToken || auth.hasEnvOAuthToken,
               apiKeyValid: auth.hasStoredApiKey || auth.hasEnvApiKey,
+              hasEnvOAuthToken: auth.hasEnvOAuthToken,
+              hasEnvApiKey: auth.hasEnvApiKey,
             };
             setClaudeAuthStatus(authStatus);
           }

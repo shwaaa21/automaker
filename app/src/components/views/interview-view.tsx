@@ -325,6 +325,7 @@ export function InterviewView() {
         ],
         skipTests: true,
       };
+
       if (!api.features) {
         throw new Error("Features API not available");
       }

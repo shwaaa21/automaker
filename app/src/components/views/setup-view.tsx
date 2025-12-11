@@ -250,21 +250,32 @@ function ClaudeSetupStep({
           setClaudeCliStatus(cliStatus);
 
           if (result.auth) {
+            // Validate method is one of the expected values, default to "none"
+            const validMethods = [
+              "oauth_token_env",
+              "oauth_token",
+              "api_key",
+              "api_key_env",
+              "none",
+            ] as const;
+            type AuthMethod = (typeof validMethods)[number];
+            const method: AuthMethod = validMethods.includes(
+              result.auth.method as AuthMethod
+            )
+              ? (result.auth.method as AuthMethod)
+              : "none";
             const authStatus = {
               authenticated: result.auth.authenticated,
-              method:
-                result.auth.method === "oauth_token"
-                  ? "oauth"
-                  : result.auth.method?.includes("api_key")
-                  ? "api_key"
-                  : "none",
+              method,
               hasCredentialsFile: false,
-              oauthTokenValid: result.auth.hasStoredOAuthToken,
+              oauthTokenValid:
+                result.auth.hasStoredOAuthToken || result.auth.hasEnvOAuthToken,
               apiKeyValid:
                 result.auth.hasStoredApiKey || result.auth.hasEnvApiKey,
+              hasEnvOAuthToken: result.auth.hasEnvOAuthToken,
+              hasEnvApiKey: result.auth.hasEnvApiKey,
             };
-            console.log("[Claude Setup] Auth Status:", authStatus);
-            setClaudeAuthStatus(authStatus as any);
+            setClaudeAuthStatus(authStatus);
           }
         }
       }
@@ -385,7 +396,7 @@ function ClaudeSetupStep({
         if (result.success) {
           setClaudeAuthStatus({
             authenticated: true,
-            method: "oauth",
+            method: "oauth_token",
             hasCredentialsFile: false,
             oauthTokenValid: true,
           });
@@ -463,8 +474,16 @@ function ClaudeSetupStep({
 
   const getAuthMethodLabel = () => {
     if (!isAuthenticated) return null;
-    if (claudeAuthStatus?.method === "oauth") return "Subscription Token";
-    if (apiKeys.anthropic || claudeAuthStatus?.method === "api_key")
+    if (
+      claudeAuthStatus?.method === "oauth_token_env" ||
+      claudeAuthStatus?.method === "oauth_token"
+    )
+      return "Subscription Token";
+    if (
+      apiKeys.anthropic ||
+      claudeAuthStatus?.method === "api_key" ||
+      claudeAuthStatus?.method === "api_key_env"
+    )
       return "API Key";
     return "Authenticated";
   };

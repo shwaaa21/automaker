@@ -768,16 +768,14 @@ ${Object.entries(projectAnalysis.filesByExtension)
         throw new Error("Features API not available");
       }
 
-      // Convert DetectedFeature to Feature by adding required id and status
       for (const detectedFeature of detectedFeatures) {
-        const feature: Feature = {
+        await api.features.create(currentProject.path, {
           id: crypto.randomUUID(),
           category: detectedFeature.category,
           description: detectedFeature.description,
           steps: detectedFeature.steps,
-          status: "backlog" as const,
-        };
-        await api.features.create(currentProject.path, feature);
+          status: "backlog",
+        });
       }
 
       setFeatureListGenerated(true);
