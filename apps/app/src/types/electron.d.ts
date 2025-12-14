@@ -266,7 +266,8 @@ export interface SpecRegenerationAPI {
   create: (
     projectPath: string,
     projectOverview: string,
-    generateFeatures?: boolean
+    generateFeatures?: boolean,
+    analyzeProject?: boolean
   ) => Promise<{
     success: boolean;
     error?: string;
@@ -274,7 +275,9 @@ export interface SpecRegenerationAPI {
 
   generate: (
     projectPath: string,
-    projectDefinition: string
+    projectDefinition: string,
+    generateFeatures?: boolean,
+    analyzeProject?: boolean
   ) => Promise<{
     success: boolean;
     error?: string;

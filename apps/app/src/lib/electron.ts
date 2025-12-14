@@ -147,11 +147,14 @@ export interface SpecRegenerationAPI {
   create: (
     projectPath: string,
     projectOverview: string,
-    generateFeatures?: boolean
+    generateFeatures?: boolean,
+    analyzeProject?: boolean
   ) => Promise<{ success: boolean; error?: string }>;
   generate: (
     projectPath: string,
-    projectDefinition: string
+    projectDefinition: string,
+    generateFeatures?: boolean,
+    analyzeProject?: boolean
   ) => Promise<{ success: boolean; error?: string }>;
   generateFeatures: (projectPath: string) => Promise<{
     success: boolean;
@@ -1850,7 +1853,11 @@ function createMockSpecRegenerationAPI(): SpecRegenerationAPI {
       return { success: true };
     },
 
-    generate: async (projectPath: string, projectDefinition: string) => {
+    generate: async (
+      projectPath: string,
+      projectDefinition: string,
+      generateFeatures = false
+    ) => {
       if (mockSpecRegenerationRunning) {
         return {
           success: false,
@@ -1859,10 +1866,16 @@ function createMockSpecRegenerationAPI(): SpecRegenerationAPI {
       }
 
       mockSpecRegenerationRunning = true;
-      console.log(`[Mock] Regenerating spec for: ${projectPath}`);
+      console.log(
+        `[Mock] Regenerating spec for: ${projectPath}, generateFeatures: ${generateFeatures}`
+      );
 
       // Simulate async spec regeneration
-      simulateSpecRegeneration(projectPath, projectDefinition);
+      simulateSpecRegeneration(
+        projectPath,
+        projectDefinition,
+        generateFeatures
+      );
 
       return { success: true };
     },
@@ -2007,7 +2020,8 @@ async function simulateSpecCreation(
 
 async function simulateSpecRegeneration(
   projectPath: string,
-  projectDefinition: string
+  projectDefinition: string,
+  generateFeatures = false
 ) {
   mockSpecRegenerationPhase = "initialization";
   emitSpecRegenerationEvent({
@@ -2055,6 +2069,25 @@ async function simulateSpecRegeneration(
     <feature_1>Regenerated features based on definition</feature_1>
   </core_capabilities>
 </project_specification>`;
+
+  if (generateFeatures) {
+    mockSpecRegenerationPhase = "spec_complete";
+    emitSpecRegenerationEvent({
+      type: "spec_regeneration_progress",
+      content:
+        "[Phase: spec_complete] Spec regenerated! Generating features...\n",
+      projectPath: projectPath,
+    });
+
+    await new Promise((resolve) => {
+      mockSpecRegenerationTimeout = setTimeout(resolve, 500);
+    });
+    if (!mockSpecRegenerationRunning) return;
+
+    // Simulate feature generation
+    await simulateFeatureGeneration(projectPath);
+    if (!mockSpecRegenerationRunning) return;
+  }
 
   mockSpecRegenerationPhase = "complete";
   emitSpecRegenerationEvent({

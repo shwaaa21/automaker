@@ -1554,6 +1554,13 @@ export function BoardView() {
       }
     });
 
+    // Sort backlog by priority: 1 (high) -> 2 (medium) -> 3 (low) -> no priority
+    map.backlog.sort((a, b) => {
+      const aPriority = a.priority ?? 999; // Features without priority go last
+      const bPriority = b.priority ?? 999;
+      return aPriority - bPriority;
+    });
+
     return map;
   }, [features, runningAutoTasks, searchQuery]);
 

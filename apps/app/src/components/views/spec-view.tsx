@@ -22,7 +22,6 @@ import {
   Loader2,
   FilePlus2,
   AlertCircle,
-  ListPlus,
   CheckCircle2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -47,12 +46,17 @@ export function SpecView() {
   const [showRegenerateDialog, setShowRegenerateDialog] = useState(false);
   const [projectDefinition, setProjectDefinition] = useState("");
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const [generateFeaturesOnRegenerate, setGenerateFeaturesOnRegenerate] =
+    useState(true);
+  const [analyzeProjectOnRegenerate, setAnalyzeProjectOnRegenerate] =
+    useState(true);
 
   // Create spec state
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [projectOverview, setProjectOverview] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [generateFeatures, setGenerateFeatures] = useState(true);
+  const [analyzeProjectOnCreate, setAnalyzeProjectOnCreate] = useState(true);
 
   // Generate features only state
   const [isGeneratingFeatures, setIsGeneratingFeatures] = useState(false);
@@ -66,6 +70,7 @@ export function SpecView() {
   const [errorMessage, setErrorMessage] = useState<string>("");
   const statusCheckRef = useRef<boolean>(false);
   const stateRestoredRef = useRef<boolean>(false);
+  const pendingStatusTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load spec from file
   const loadSpec = useCallback(async () => {
@@ -99,6 +104,26 @@ export function SpecView() {
     loadSpec();
   }, [loadSpec]);
 
+  // Reset all spec regeneration state when project changes
+  useEffect(() => {
+    // Clear all state when switching projects
+    setIsCreating(false);
+    setIsRegenerating(false);
+    setIsGeneratingFeatures(false);
+    setCurrentPhase("");
+    setErrorMessage("");
+    setLogs("");
+    logsRef.current = "";
+    stateRestoredRef.current = false;
+    statusCheckRef.current = false;
+
+    // Clear any pending timeout
+    if (pendingStatusTimeoutRef.current) {
+      clearTimeout(pendingStatusTimeoutRef.current);
+      pendingStatusTimeoutRef.current = null;
+    }
+  }, [currentProject?.path]);
+
   // Check if spec regeneration is running when component mounts or project changes
   useEffect(() => {
     const checkStatus = async () => {
@@ -113,40 +138,44 @@ export function SpecView() {
         }
 
         const status = await api.specRegeneration.status();
-        console.log("[SpecView] Status check on mount:", status);
+        console.log(
+          "[SpecView] Status check on mount:",
+          status,
+          "for project:",
+          currentProject.path
+        );
 
         if (status.success && status.isRunning) {
-          // Something is running - restore state using backend's authoritative phase
+          // Something is running globally, but we can't verify it's for this project
+          // since the backend doesn't track projectPath in status
+          // Tentatively show loader - events will confirm if it's for this project
           console.log(
-            "[SpecView] Spec generation is running - restoring state",
-            { phase: status.currentPhase }
+            "[SpecView] Spec generation is running globally. Tentatively showing loader, waiting for events to confirm project match."
           );
 
-          if (!stateRestoredRef.current) {
-            setIsCreating(true);
-            setIsRegenerating(true);
-            stateRestoredRef.current = true;
-          }
-
-          // Use the backend's currentPhase directly - single source of truth
+          // Tentatively set state - events will confirm or clear it
+          setIsCreating(true);
+          setIsRegenerating(true);
           if (status.currentPhase) {
             setCurrentPhase(status.currentPhase);
           } else {
-            setCurrentPhase("in progress");
+            setCurrentPhase("initialization");
           }
 
-          // Add resume message to logs if needed
-          if (!logsRef.current) {
-            const resumeMessage =
-              "[Status] Resumed monitoring existing spec generation process...\n";
-            logsRef.current = resumeMessage;
-            setLogs(resumeMessage);
-          } else if (!logsRef.current.includes("Resumed monitoring")) {
-            const resumeMessage =
-              "\n[Status] Resumed monitoring existing spec generation process...\n";
-            logsRef.current = logsRef.current + resumeMessage;
-            setLogs(logsRef.current);
+          // Set a timeout to clear state if no events arrive for this project within 3 seconds
+          if (pendingStatusTimeoutRef.current) {
+            clearTimeout(pendingStatusTimeoutRef.current);
           }
+          pendingStatusTimeoutRef.current = setTimeout(() => {
+            // If no events confirmed this is for current project, clear state
+            console.log(
+              "[SpecView] No events received for current project - clearing tentative state"
+            );
+            setIsCreating(false);
+            setIsRegenerating(false);
+            setCurrentPhase("");
+            pendingStatusTimeoutRef.current = null;
+          }, 3000);
         } else if (status.success && !status.isRunning) {
           // Not running - clear all state
           setIsCreating(false);
@@ -274,6 +303,8 @@ export function SpecView() {
 
   // Subscribe to spec regeneration events
   useEffect(() => {
+    if (!currentProject) return;
+
     const api = getElectronAPI();
     if (!api.specRegeneration) return;
 
@@ -283,7 +314,9 @@ export function SpecView() {
           "[SpecView] Regeneration event:",
           event.type,
           "for project:",
-          event.projectPath
+          event.projectPath,
+          "current project:",
+          currentProject?.path
         );
 
         // Only handle events for the current project
@@ -292,7 +325,20 @@ export function SpecView() {
           return;
         }
 
+        // Clear any pending timeout since we received an event for this project
+        if (pendingStatusTimeoutRef.current) {
+          clearTimeout(pendingStatusTimeoutRef.current);
+          pendingStatusTimeoutRef.current = null;
+          console.log(
+            "[SpecView] Event confirmed this is for current project - clearing timeout"
+          );
+        }
+
         if (event.type === "spec_regeneration_progress") {
+          // Ensure state is set when we receive events for this project
+          setIsCreating(true);
+          setIsRegenerating(true);
+
           // Extract phase from content if present
           const phaseMatch = event.content.match(/\[Phase:\s*([^\]]+)\]/);
           if (phaseMatch) {
@@ -475,7 +521,7 @@ export function SpecView() {
     return () => {
       unsubscribe();
     };
-  }, [loadSpec]);
+  }, [currentProject?.path, loadSpec, errorMessage, currentPhase]);
 
   // Save spec to file
   const saveSpec = async () => {
@@ -505,12 +551,16 @@ export function SpecView() {
     if (!currentProject || !projectDefinition.trim()) return;
 
     setIsRegenerating(true);
+    setShowRegenerateDialog(false);
     setCurrentPhase("initialization");
     setErrorMessage("");
     // Reset logs when starting new regeneration
     logsRef.current = "";
     setLogs("");
-    console.log("[SpecView] Starting spec regeneration");
+    console.log(
+      "[SpecView] Starting spec regeneration, generateFeatures:",
+      generateFeaturesOnRegenerate
+    );
     try {
       const api = getElectronAPI();
       if (!api.specRegeneration) {
@@ -520,7 +570,9 @@ export function SpecView() {
       }
       const result = await api.specRegeneration.generate(
         currentProject.path,
-        projectDefinition.trim()
+        projectDefinition.trim(),
+        generateFeaturesOnRegenerate,
+        analyzeProjectOnRegenerate
       );
 
       if (!result.success) {
@@ -570,7 +622,8 @@ export function SpecView() {
       const result = await api.specRegeneration.create(
         currentProject.path,
         projectOverview.trim(),
-        generateFeatures
+        generateFeatures,
+        analyzeProjectOnCreate
       );
 
       if (!result.success) {
@@ -841,6 +894,33 @@ export function SpecView() {
 
               <div className="flex items-start space-x-3 pt-2">
                 <Checkbox
+                  id="analyze-project-create"
+                  checked={analyzeProjectOnCreate}
+                  onCheckedChange={(checked) =>
+                    setAnalyzeProjectOnCreate(checked === true)
+                  }
+                  disabled={isCreating}
+                />
+                <div className="space-y-1">
+                  <label
+                    htmlFor="analyze-project-create"
+                    className={`text-sm font-medium ${
+                      isCreating ? "" : "cursor-pointer"
+                    }`}
+                  >
+                    Analyze current project for additional context
+                  </label>
+                  <p className="text-xs text-muted-foreground">
+                    If checked, the agent will research your existing codebase
+                    to understand the tech stack. If unchecked, defaults to
+                    TanStack Start, Drizzle ORM, PostgreSQL, shadcn/ui, Tailwind
+                    CSS, and React.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-3 pt-2">
+                <Checkbox
                   id="generate-features"
                   checked={generateFeatures}
                   onCheckedChange={(checked) =>
@@ -1052,27 +1132,61 @@ export function SpecView() {
                 disabled={isRegenerating}
               />
             </div>
+
+            <div className="flex items-start space-x-3 pt-2">
+              <Checkbox
+                id="analyze-project-regenerate"
+                checked={analyzeProjectOnRegenerate}
+                onCheckedChange={(checked) =>
+                  setAnalyzeProjectOnRegenerate(checked === true)
+                }
+                disabled={isRegenerating}
+              />
+              <div className="space-y-1">
+                <label
+                  htmlFor="analyze-project-regenerate"
+                  className={`text-sm font-medium ${
+                    isRegenerating ? "" : "cursor-pointer"
+                  }`}
+                >
+                  Analyze current project for additional context
+                </label>
+                <p className="text-xs text-muted-foreground">
+                  If checked, the agent will research your existing codebase to
+                  understand the tech stack. If unchecked, defaults to TanStack
+                  Start, Drizzle ORM, PostgreSQL, shadcn/ui, Tailwind CSS, and
+                  React.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start space-x-3 pt-2">
+              <Checkbox
+                id="generate-features-regenerate"
+                checked={generateFeaturesOnRegenerate}
+                onCheckedChange={(checked) =>
+                  setGenerateFeaturesOnRegenerate(checked === true)
+                }
+                disabled={isRegenerating}
+              />
+              <div className="space-y-1">
+                <label
+                  htmlFor="generate-features-regenerate"
+                  className={`text-sm font-medium ${
+                    isRegenerating ? "" : "cursor-pointer"
+                  }`}
+                >
+                  Generate feature list
+                </label>
+                <p className="text-xs text-muted-foreground">
+                  Automatically create features in the features folder from the
+                  implementation roadmap after the spec is regenerated.
+                </p>
+              </div>
+            </div>
           </div>
 
-          <DialogFooter className="flex justify-between sm:justify-between">
-            <Button
-              variant="outline"
-              onClick={handleGenerateFeatures}
-              disabled={isRegenerating || isGeneratingFeatures}
-              title="Generate features from the existing app_spec.txt without regenerating the spec"
-            >
-              {isGeneratingFeatures ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <ListPlus className="w-4 h-4 mr-2" />
-                  Generate Features
-                </>
-              )}
-            </Button>
+          <DialogFooter>
             <div className="flex gap-2">
               <Button
                 variant="ghost"

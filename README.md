@@ -1,6 +1,36 @@
+> **[!TIP]**
+>
+> **Learn more about Agentic Coding!**
+>
+> Automaker itself was built by a group of engineers using AI and agentic coding techniques to build features faster than ever. By leveraging tools like Cursor IDE and Claude Code CLI, the team orchestrated AI agents to implement complex functionality in days instead of weeks.
+>
+> **Learn how:** Master these same techniques and workflows in the [Agentic Jumpstart course](https://agenticjumpstart.com/).
+
 # Automaker
 
-Automaker is an autonomous AI development studio that helps you build software faster using AI-powered agents. It provides a visual Kanban board interface to manage features, automatically assigns AI agents to implement them, and tracks progress through an intuitive workflow from backlog to verified completion.
+**Stop typing code. Start directing AI agents.**
+
+Automaker is an autonomous AI development studio that transforms how you build software. Instead of manually writing every line of code, you describe features on a Kanban board and watch as AI agents powered by Claude Code automatically implement them.
+
+## What Makes Automaker Different?
+
+Traditional development tools help you write code. Automaker helps you **orchestrate AI agents** to build entire features autonomously. Think of it as having a team of AI developers working for you—you define what needs to be built, and Automaker handles the implementation.
+
+### The Workflow
+
+1. **Add Features** - Describe features you want built (with text, images, or screenshots)
+2. **Move to "In Progress"** - Automaker automatically assigns an AI agent to implement the feature
+3. **Watch It Build** - See real-time progress as the agent writes code, runs tests, and makes changes
+4. **Review & Verify** - Review the changes, run tests, and approve when ready
+5. **Ship Faster** - Build entire applications in days, not weeks
+
+### Powered by Claude Code
+
+Automaker leverages the [Claude Agent SDK](https://docs.anthropic.com/en/docs/claude-code) to give AI agents full access to your codebase. Agents can read files, write code, execute commands, run tests, and make git commits—all while working in isolated git worktrees to keep your main branch safe.
+
+### Why This Matters
+
+The future of software development is **agentic coding**—where developers become architects directing AI agents rather than manual coders. Automaker puts this future in your hands today, letting you experience what it's like to build software 10x faster with AI agents handling the implementation while you focus on architecture and business logic.
 
 ---
 
@@ -36,20 +66,22 @@ cd automaker
 # 2. Install dependencies
 npm install
 
-# 3. Get your Claude Code OAuth token
-claude setup-token
-# ⚠️ This prints your token - don't share your screen!
-
-# 4. Set the token and run
-export CLAUDE_CODE_OAUTH_TOKEN="sk-ant-oat01-..."
-npm run dev:electron
+# 3. Run Automaker (pick your mode)
+npm run dev
+# Then choose your run mode when prompted, or use specific commands below
 ```
 
 ## How to Run
 
-### Development Modes
+### Development Mode
 
-Automaker can be run in several modes:
+Start Automaker in development mode:
+
+```bash
+npm run dev
+```
+
+This will prompt you to choose your run mode, or you can specify a mode directly:
 
 #### Electron Desktop App (Recommended)
 
@@ -72,8 +104,6 @@ npm run dev:electron:wsl:gpu
 ```bash
 # Run in web browser (http://localhost:3007)
 npm run dev:web
-# or
-npm run dev
 ```
 
 ### Building for Production

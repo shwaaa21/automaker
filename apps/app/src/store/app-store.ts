@@ -286,6 +286,7 @@ export interface Feature {
   model?: AgentModel; // Model to use for this feature (defaults to opus)
   thinkingLevel?: ThinkingLevel; // Thinking level for extended thinking (defaults to none)
   error?: string; // Error message if the agent errored during processing
+  priority?: number; // Priority: 1 = high, 2 = medium, 3 = low
   // Worktree info - set when a feature is being worked on in an isolated git worktree
   worktreePath?: string; // Path to the worktree directory
   branchName?: string; // Name of the feature branch

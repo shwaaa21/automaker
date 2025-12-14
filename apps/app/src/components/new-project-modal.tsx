@@ -31,6 +31,8 @@ import { getHttpApiClient } from "@/lib/http-api-client";
 import { cn } from "@/lib/utils";
 import { useFileBrowser } from "@/contexts/file-browser-context";
 
+const LAST_PROJECT_DIR_KEY = "automaker:lastProjectDir";
+
 interface ValidationErrors {
   projectName?: boolean;
   workspaceDir?: boolean;
@@ -80,6 +82,14 @@ export function NewProjectModal({
   // Fetch workspace directory when modal opens
   useEffect(() => {
     if (open) {
+      // First, check localStorage for last used directory
+      const lastUsedDir = localStorage.getItem(LAST_PROJECT_DIR_KEY);
+      if (lastUsedDir) {
+        setWorkspaceDir(lastUsedDir);
+        return;
+      }
+
+      // Fall back to server config if no saved directory
       setIsLoadingWorkspace(true);
       const httpClient = getHttpApiClient();
       httpClient.workspace
@@ -201,6 +211,8 @@ export function NewProjectModal({
     });
     if (selectedPath) {
       setWorkspaceDir(selectedPath);
+      // Save to localStorage for next time
+      localStorage.setItem(LAST_PROJECT_DIR_KEY, selectedPath);
       // Clear any workspace error when a valid directory is selected
       if (errors.workspaceDir) {
         setErrors((prev) => ({ ...prev, workspaceDir: false }));

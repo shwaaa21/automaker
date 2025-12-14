@@ -57,6 +57,7 @@ import {
   ChevronDown,
   ChevronUp,
   Brain,
+  Flag,
 } from "lucide-react";
 import { CountUpTimer } from "@/components/ui/count-up-timer";
 import { getElectronAPI } from "@/lib/electron";
@@ -87,6 +88,33 @@ function formatThinkingLevel(level: ThinkingLevel | undefined): string {
     ultrathink: "Ultra",
   };
   return labels[level];
+}
+
+/**
+ * Formats priority for display
+ */
+function formatPriority(priority: number | undefined): string | null {
+  if (!priority) return null;
+  const labels: Record<number, string> = {
+    1: "High",
+    2: "Medium",
+    3: "Low",
+  };
+  return labels[priority] || null;
+}
+
+/**
+ * Gets priority badge color classes
+ */
+function getPriorityBadgeClasses(priority: number | undefined): string {
+  if (priority === 1) {
+    return "bg-red-500/20 border border-red-500/50 text-red-400";
+  } else if (priority === 2) {
+    return "bg-yellow-500/20 border border-yellow-500/50 text-yellow-400";
+  } else if (priority === 3) {
+    return "bg-blue-500/20 border border-blue-500/50 text-blue-400";
+  }
+  return "";
 }
 
 interface KanbanCardProps {
@@ -197,6 +225,34 @@ export const KanbanCard = memo(function KanbanCard({
 
     return () => clearInterval(interval);
   }, [feature.justFinishedAt, feature.status, currentTime]);
+
+  // Calculate priority badge position
+  const priorityLabel = formatPriority(feature.priority);
+  const hasPriority = !!priorityLabel;
+
+  // Calculate top position for badges (stacking vertically)
+  const getBadgeTopPosition = (badgeIndex: number) => {
+    return badgeIndex === 0
+      ? "top-2"
+      : badgeIndex === 1
+      ? "top-8"
+      : badgeIndex === 2
+      ? "top-14"
+      : "top-20";
+  };
+
+  // Determine badge positions (must be after isJustFinished is defined)
+  let badgeIndex = 0;
+  const priorityBadgeIndex = hasPriority ? badgeIndex++ : -1;
+  const skipTestsBadgeIndex =
+    feature.skipTests && !feature.error ? badgeIndex++ : -1;
+  const errorBadgeIndex = feature.error ? badgeIndex++ : -1;
+  const justFinishedBadgeIndex = isJustFinished ? badgeIndex++ : -1;
+  const branchBadgeIndex =
+    hasWorktree && !isCurrentAutoTask ? badgeIndex++ : -1;
+
+  // Total number of badges displayed
+  const totalBadgeCount = badgeIndex;
 
   // Load context file for in_progress, waiting_approval, and verified features
   useEffect(() => {
@@ -353,12 +409,29 @@ export const KanbanCard = memo(function KanbanCard({
           style={{ opacity: opacity / 100 }}
         />
       )}
+      {/* Priority badge */}
+      {hasPriority && (
+        <div
+          className={cn(
+            "absolute px-1.5 py-0.5 text-[10px] font-medium rounded flex items-center gap-1 z-10",
+            getBadgeTopPosition(priorityBadgeIndex),
+            "left-2",
+            getPriorityBadgeClasses(feature.priority)
+          )}
+          data-testid={`priority-badge-${feature.id}`}
+          title={`Priority: ${priorityLabel}`}
+        >
+          <Flag className="w-3 h-3" />
+          <span>{priorityLabel}</span>
+        </div>
+      )}
       {/* Skip Tests indicator badge */}
       {feature.skipTests && !feature.error && (
         <div
           className={cn(
             "absolute px-1.5 py-0.5 text-[10px] font-medium rounded flex items-center gap-1 z-10",
-            "top-2 left-2",
+            getBadgeTopPosition(skipTestsBadgeIndex),
+            "left-2",
             "bg-orange-500/20 border border-orange-500/50 text-orange-400"
           )}
           data-testid={`skip-tests-badge-${feature.id}`}
@@ -373,7 +446,8 @@ export const KanbanCard = memo(function KanbanCard({
         <div
           className={cn(
             "absolute px-1.5 py-0.5 text-[10px] font-medium rounded flex items-center gap-1 z-10",
-            "top-2 left-2",
+            getBadgeTopPosition(errorBadgeIndex),
+            "left-2",
             "bg-red-500/20 border border-red-500/50 text-red-400"
           )}
           data-testid={`error-badge-${feature.id}`}
@@ -388,7 +462,8 @@ export const KanbanCard = memo(function KanbanCard({
         <div
           className={cn(
             "absolute px-1.5 py-0.5 text-[10px] font-medium rounded flex items-center gap-1 z-10",
-            feature.skipTests ? "top-8 left-2" : "top-2 left-2",
+            getBadgeTopPosition(justFinishedBadgeIndex),
+            "left-2",
             "bg-green-500/20 border border-green-500/50 text-green-400 animate-pulse"
           )}
           data-testid={`just-finished-badge-${feature.id}`}
@@ -407,10 +482,8 @@ export const KanbanCard = memo(function KanbanCard({
                 className={cn(
                   "absolute px-1.5 py-0.5 text-[10px] font-medium rounded flex items-center gap-1 z-10 cursor-default",
                   "bg-purple-500/20 border border-purple-500/50 text-purple-400",
-                  // Position below other badges if present, otherwise use normal position
-                  feature.error || feature.skipTests || isJustFinished
-                    ? "top-8 left-2"
-                    : "top-2 left-2"
+                  getBadgeTopPosition(branchBadgeIndex),
+                  "left-2"
                 )}
                 data-testid={`branch-badge-${feature.id}`}
               >
@@ -432,11 +505,11 @@ export const KanbanCard = memo(function KanbanCard({
         className={cn(
           "p-3 pb-2 block", // Reset grid layout to block for custom kanban card layout
           // Add extra top padding when badges are present to prevent text overlap
-          (feature.skipTests || feature.error || isJustFinished) && "pt-10",
-          // Add even more top padding when both badges and branch are shown
-          hasWorktree &&
-            (feature.skipTests || feature.error || isJustFinished) &&
-            "pt-14"
+          // Calculate padding based on number of badges
+          totalBadgeCount === 1 && "pt-10",
+          totalBadgeCount === 2 && "pt-14",
+          totalBadgeCount === 3 && "pt-20",
+          totalBadgeCount >= 4 && "pt-24"
         )}
       >
         {isCurrentAutoTask && (

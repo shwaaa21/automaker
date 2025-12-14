@@ -1129,7 +1129,7 @@ When done, summarize what you implemented and any notes for the developer.`;
       if (msg.type === "assistant" && msg.message?.content) {
         for (const block of msg.message.content) {
           if (block.type === "text") {
-            responseText = block.text || "";
+            responseText += block.text || "";
 
             // Check for authentication errors in the response
             if (

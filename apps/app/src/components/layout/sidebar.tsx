@@ -381,8 +381,6 @@ export function Sidebar() {
           toast.success("App specification created", {
             description: "Your project is now set up and ready to go!",
           });
-          // Navigate to spec view to show the new spec
-          setCurrentView("spec");
         } else if (event.type === "spec_regeneration_error") {
           setSpecCreatingForProject(null);
           toast.error("Failed to create specification", {
