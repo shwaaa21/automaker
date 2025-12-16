@@ -21,9 +21,14 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: "npm"
           cache-dependency-path: package-lock.json
+
+      - name: Configure Git for HTTPS
+        # Convert SSH URLs to HTTPS for git dependencies (e.g., @electron/node-gyp)
+        # This is needed because SSH authentication isn't available in CI
+        run: git config --global url."https://github.com/".insteadOf "git@github.com:"
 
       - name: Install dependencies
         # Use npm install instead of npm ci to correctly resolve platform-specific
