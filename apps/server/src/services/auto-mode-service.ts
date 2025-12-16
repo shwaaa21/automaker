@@ -1156,6 +1156,64 @@ When done, summarize what you implemented and any notes for the developer.`;
     imagePaths?: string[],
     model?: string
   ): Promise<void> {
+    // CI/CD Mock Mode: Return early with mock response when AUTOMAKER_MOCK_AGENT is set
+    // This prevents actual API calls during automated testing
+    if (process.env.AUTOMAKER_MOCK_AGENT === "true") {
+      console.log(`[AutoMode] MOCK MODE: Skipping real agent execution for feature ${featureId}`);
+
+      // Simulate some work being done
+      await this.sleep(500);
+
+      // Emit mock progress events to simulate agent activity
+      this.emitAutoModeEvent("auto_mode_progress", {
+        featureId,
+        content: "Mock agent: Analyzing the codebase...",
+      });
+
+      await this.sleep(300);
+
+      this.emitAutoModeEvent("auto_mode_progress", {
+        featureId,
+        content: "Mock agent: Implementing the feature...",
+      });
+
+      await this.sleep(300);
+
+      // Create a mock file with "yellow" content as requested in the test
+      const mockFilePath = path.join(workDir, "yellow.txt");
+      await fs.writeFile(mockFilePath, "yellow");
+
+      this.emitAutoModeEvent("auto_mode_progress", {
+        featureId,
+        content: "Mock agent: Created yellow.txt file with content 'yellow'",
+      });
+
+      await this.sleep(200);
+
+      // Save mock agent output
+      const configProjectPath = this.config?.projectPath || workDir;
+      const featureDirForOutput = getFeatureDir(configProjectPath, featureId);
+      const outputPath = path.join(featureDirForOutput, "agent-output.md");
+
+      const mockOutput = `# Mock Agent Output
+
+## Summary
+This is a mock agent response for CI/CD testing.
+
+## Changes Made
+- Created \`yellow.txt\` with content "yellow"
+
+## Notes
+This mock response was generated because AUTOMAKER_MOCK_AGENT=true was set.
+`;
+
+      await fs.mkdir(path.dirname(outputPath), { recursive: true });
+      await fs.writeFile(outputPath, mockOutput);
+
+      console.log(`[AutoMode] MOCK MODE: Completed mock execution for feature ${featureId}`);
+      return;
+    }
+
     // Build SDK options using centralized configuration for feature implementation
     const sdkOptions = createAutoModeOptions({
       cwd: workDir,
