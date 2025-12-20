@@ -76,6 +76,14 @@ blob-report/
 # TypeScript
 *.tsbuildinfo
 
+# Prevent compiled files in source directories
+libs/*/src/**/*.js
+libs/*/src/**/*.d.ts
+libs/*/src/**/*.d.ts.map
+apps/*/src/**/*.js
+apps/*/src/**/*.d.ts
+apps/*/src/**/*.d.ts.map
+
 # Misc
 *.pem
 
