@@ -110,8 +110,8 @@ test.describe("Kanban Responsive Scaling Tests", () => {
           expect(Math.abs(columnWidth - baseWidth)).toBeLessThan(2);
         }
 
-        // Column width should be within expected bounds (240px min, 360px max)
-        expect(baseWidth).toBeGreaterThanOrEqual(240);
+        // Column width should be within expected bounds (280px min, 360px max)
+        expect(baseWidth).toBeGreaterThanOrEqual(280);
         expect(baseWidth).toBeLessThanOrEqual(360);
 
         // Columns should not overlap (check x positions)
@@ -149,9 +149,30 @@ test.describe("Kanban Responsive Scaling Tests", () => {
     expect(verifiedBox).not.toBeNull();
 
     if (backlogBox && verifiedBox) {
-      // Calculate the left and right margins
-      const leftMargin = backlogBox.x;
-      const rightMargin = 1600 - (verifiedBox.x + verifiedBox.width);
+      // Get the actual container width (accounting for sidebar)
+      // The board-view container is inside a flex container that accounts for sidebar
+      const containerWidth = await page.evaluate(() => {
+        const boardView = document.querySelector('[data-testid="board-view"]');
+        if (!boardView) return window.innerWidth;
+        const parent = boardView.parentElement;
+        return parent ? parent.clientWidth : window.innerWidth;
+      });
+
+      // Calculate the left and right margins relative to the container
+      // The bounding box x is relative to the viewport, so we need to find where
+      // the container starts relative to the viewport
+      const containerLeft = await page.evaluate(() => {
+        const boardView = document.querySelector('[data-testid="board-view"]');
+        if (!boardView) return 0;
+        const parent = boardView.parentElement;
+        if (!parent) return 0;
+        const rect = parent.getBoundingClientRect();
+        return rect.left;
+      });
+
+      // Calculate margins relative to the container
+      const leftMargin = backlogBox.x - containerLeft;
+      const rightMargin = containerWidth - (verifiedBox.x + verifiedBox.width - containerLeft);
 
       // The margins should be roughly equal (columns are centered)
       // Allow for some tolerance due to padding and gaps

@@ -37,8 +37,6 @@ export function SettingsView() {
     setShowProfilesOnly,
     muteDoneSound,
     setMuteDoneSound,
-    hideMarketingContent,
-    setHideMarketingContent,
     currentProject,
     moveProjectToTrash,
     defaultPlanningMode,
@@ -104,9 +102,7 @@ export function SettingsView() {
           <AppearanceSection
             effectiveTheme={effectiveTheme}
             currentProject={settingsProject}
-            hideMarketingContent={hideMarketingContent}
             onThemeChange={handleSetTheme}
-            onHideMarketingContentChange={setHideMarketingContent}
           />
         );
       case "keyboard":

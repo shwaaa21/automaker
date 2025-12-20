@@ -2,7 +2,6 @@ import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useLocation } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 import { useAppStore, formatShortcut, type ThemeMode } from "@/store/app-store";
-import { CoursePromoBadge } from "@/components/ui/course-promo-badge";
 import {
   FolderOpen,
   Plus,
@@ -1942,8 +1941,6 @@ export function Sidebar() {
           "bg-gradient-to-t from-background/10 via-sidebar/50 to-transparent"
         )}
       >
-        {/* Course Promo Badge */}
-        <CoursePromoBadge sidebarOpen={sidebarOpen} />
         {/* Wiki Link */}
         {!hideWiki && (
           <div className="p-2 pb-0">

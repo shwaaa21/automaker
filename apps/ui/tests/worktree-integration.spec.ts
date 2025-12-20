@@ -799,10 +799,14 @@ test.describe("Worktree Integration Tests", () => {
     await clickAddFeature(page);
 
     // Fill in the feature details with the new branch
-    await fillAddFeatureDialog(page, "Feature that should auto-create worktree", {
-      branch: branchName,
-      category: "Testing",
-    });
+    await fillAddFeatureDialog(
+      page,
+      "Feature that should auto-create worktree",
+      {
+        branch: branchName,
+        category: "Testing",
+      }
+    );
 
     // Confirm
     await confirmAddFeature(page);
@@ -835,7 +839,7 @@ test.describe("Worktree Integration Tests", () => {
 
     const featureFilePath = path.join(featuresDir, featureDir!, "feature.json");
     const featureData = JSON.parse(fs.readFileSync(featureFilePath, "utf-8"));
-    
+
     // Verify branch name is stored
     expect(featureData.branchName).toBe(branchName);
 
@@ -900,7 +904,7 @@ test.describe("Worktree Integration Tests", () => {
 
     let featureFilePath = path.join(featuresDir, featureDir!, "feature.json");
     let featureData = JSON.parse(fs.readFileSync(featureFilePath, "utf-8"));
-    
+
     // Verify feature was created with the branch name stored
     expect(featureData.branchName).toBe(branchName);
     // Verify worktreePath is NOT set (worktrees are created at execution time, not when adding)
@@ -1084,7 +1088,9 @@ test.describe("Worktree Integration Tests", () => {
     // When a worktree is selected, "Use current selected branch" should be selected
     // and the branch name should be shown in the label
     const currentBranchLabel = page.locator('label[for="feature-current"]');
-    await expect(currentBranchLabel).toContainText(branchName, { timeout: 5000 });
+    await expect(currentBranchLabel).toContainText(branchName, {
+      timeout: 5000,
+    });
 
     // Close dialog
     await page.keyboard.press("Escape");
@@ -1275,11 +1281,7 @@ test.describe("Worktree Integration Tests", () => {
     expect(featureDir).toBeDefined();
 
     // Read the feature data
-    const featureFilePath = path.join(
-      featuresDir,
-      featureDir!,
-      "feature.json"
-    );
+    const featureFilePath = path.join(featuresDir, featureDir!, "feature.json");
     const featureData = JSON.parse(fs.readFileSync(featureFilePath, "utf-8"));
     expect(featureData.status).toBe("backlog");
 
@@ -1296,9 +1298,7 @@ test.describe("Worktree Integration Tests", () => {
 
     // Wait for the feature to move to in_progress column
     await expect(async () => {
-      const updatedData = JSON.parse(
-        fs.readFileSync(featureFilePath, "utf-8")
-      );
+      const updatedData = JSON.parse(fs.readFileSync(featureFilePath, "utf-8"));
       expect(updatedData.status).toBe("in_progress");
     }).toPass({ timeout: 10000 });
 
@@ -1911,7 +1911,10 @@ test.describe("Worktree Integration Tests", () => {
     await apiCreateWorktree(page, testRepo.path, branchName);
 
     // Add a file and commit in the worktree
-    fs.writeFileSync(path.join(worktreePath, "merge-file.txt"), "merge content");
+    fs.writeFileSync(
+      path.join(worktreePath, "merge-file.txt"),
+      "merge content"
+    );
     await execAsync("git add merge-file.txt", { cwd: worktreePath });
     await execAsync('git commit -m "Add file for merge test"', {
       cwd: worktreePath,
@@ -2065,9 +2068,9 @@ test.describe("Worktree Integration Tests", () => {
 
     // Verify the worktree has the file from develop
     const worktreePath = getWorktreePath(testRepo.path, "feature/from-develop");
-    expect(
-      fs.existsSync(path.join(worktreePath, "develop-only.txt"))
-    ).toBe(true);
+    expect(fs.existsSync(path.join(worktreePath, "develop-only.txt"))).toBe(
+      true
+    );
     const content = fs.readFileSync(
       path.join(worktreePath, "develop-only.txt"),
       "utf-8"
@@ -2100,10 +2103,9 @@ test.describe("Worktree Integration Tests", () => {
 
     // Verify the worktree starts from the same commit as main
     const worktreePath = getWorktreePath(testRepo.path, "feature/from-head");
-    const { stdout: worktreeHash } = await execAsync(
-      "git rev-parse HEAD~0",
-      { cwd: worktreePath }
-    );
+    const { stdout: worktreeHash } = await execAsync("git rev-parse HEAD~0", {
+      cwd: worktreePath,
+    });
 
     // The worktree's initial commit should be the same as main's HEAD
     // (Since it was just created, we check the parent commit)
@@ -2395,9 +2397,9 @@ test.describe("Worktree Integration Tests", () => {
     let featureData = JSON.parse(fs.readFileSync(featureFilePath, "utf-8"));
 
     // Initially, the feature should be on main or have no branch set
-    expect(
-      !featureData.branchName || featureData.branchName === "main"
-    ).toBe(true);
+    expect(!featureData.branchName || featureData.branchName === "main").toBe(
+      true
+    );
 
     // The new branch we want to assign
     const newBranchName = "feature/edited-branch";
@@ -2428,7 +2430,7 @@ test.describe("Worktree Integration Tests", () => {
     await page.waitForTimeout(300);
 
     // Type the new branch name
-    const commandInput = page.locator('[cmdk-input]');
+    const commandInput = page.locator("[cmdk-input]");
     await commandInput.fill(newBranchName);
 
     // Press Enter to select/create the branch
@@ -2519,7 +2521,7 @@ test.describe("Worktree Integration Tests", () => {
     await page.waitForTimeout(300);
 
     // Type "main" to change to main branch
-    const commandInput = page.locator('[cmdk-input]');
+    const commandInput = page.locator("[cmdk-input]");
     await commandInput.fill("main");
     await commandInput.press("Enter");
     await page.waitForTimeout(200);
@@ -2577,7 +2579,7 @@ test.describe("Worktree Integration Tests", () => {
     await branchInput.click();
     await page.waitForTimeout(300);
 
-    const commandInput = page.locator('[cmdk-input]');
+    const commandInput = page.locator("[cmdk-input]");
     await commandInput.fill(existingBranch);
     await commandInput.press("Enter");
     await page.waitForTimeout(200);
