@@ -5,18 +5,19 @@
  * Supports modes: improve, technical, simplify, acceptance
  */
 
-import type { Request, Response } from "express";
-import { query } from "@anthropic-ai/claude-agent-sdk";
-import { createLogger } from "../../../lib/logger.js";
+import type { Request, Response } from 'express';
+import { query } from '@anthropic-ai/claude-agent-sdk';
+import { createLogger } from '@automaker/utils';
+import { resolveModelString } from '@automaker/model-resolver';
+import { CLAUDE_MODEL_MAP } from '@automaker/types';
 import {
   getSystemPrompt,
   buildUserPrompt,
   isValidEnhancementMode,
   type EnhancementMode,
-} from "../../../lib/enhancement-prompts.js";
-import { resolveModelString, CLAUDE_MODEL_MAP } from "../../../lib/model-resolver.js";
+} from '../../../lib/enhancement-prompts.js';
 
-const logger = createLogger("EnhancePrompt");
+const logger = createLogger('EnhancePrompt');
 
 /**
  * Request body for the enhance endpoint
@@ -62,16 +63,16 @@ async function extractTextFromStream(
     };
   }>
 ): Promise<string> {
-  let responseText = "";
+  let responseText = '';
 
   for await (const msg of stream) {
-    if (msg.type === "assistant" && msg.message?.content) {
+    if (msg.type === 'assistant' && msg.message?.content) {
       for (const block of msg.message.content) {
-        if (block.type === "text" && block.text) {
+        if (block.type === 'text' && block.text) {
           responseText += block.text;
         }
       }
-    } else if (msg.type === "result" && msg.subtype === "success") {
+    } else if (msg.type === 'result' && msg.subtype === 'success') {
       responseText = msg.result || responseText;
     }
   }
@@ -84,29 +85,25 @@ async function extractTextFromStream(
  *
  * @returns Express request handler for text enhancement
  */
-export function createEnhanceHandler(): (
-  req: Request,
-  res: Response
-) => Promise<void> {
+export function createEnhanceHandler(): (req: Request, res: Response) => Promise<void> {
   return async (req: Request, res: Response): Promise<void> => {
     try {
-      const { originalText, enhancementMode, model } =
-        req.body as EnhanceRequestBody;
+      const { originalText, enhancementMode, model } = req.body as EnhanceRequestBody;
 
       // Validate required fields
-      if (!originalText || typeof originalText !== "string") {
+      if (!originalText || typeof originalText !== 'string') {
         const response: EnhanceErrorResponse = {
           success: false,
-          error: "originalText is required and must be a string",
+          error: 'originalText is required and must be a string',
         };
         res.status(400).json(response);
         return;
       }
 
-      if (!enhancementMode || typeof enhancementMode !== "string") {
+      if (!enhancementMode || typeof enhancementMode !== 'string') {
         const response: EnhanceErrorResponse = {
           success: false,
-          error: "enhancementMode is required and must be a string",
+          error: 'enhancementMode is required and must be a string',
         };
         res.status(400).json(response);
         return;
@@ -117,7 +114,7 @@ export function createEnhanceHandler(): (
       if (trimmedText.length === 0) {
         const response: EnhanceErrorResponse = {
           success: false,
-          error: "originalText cannot be empty",
+          error: 'originalText cannot be empty',
         };
         res.status(400).json(response);
         return;
@@ -127,11 +124,9 @@ export function createEnhanceHandler(): (
       const normalizedMode = enhancementMode.toLowerCase();
       const validMode: EnhancementMode = isValidEnhancementMode(normalizedMode)
         ? normalizedMode
-        : "improve";
+        : 'improve';
 
-      logger.info(
-        `Enhancing text with mode: ${validMode}, length: ${trimmedText.length} chars`
-      );
+      logger.info(`Enhancing text with mode: ${validMode}, length: ${trimmedText.length} chars`);
 
       // Get the system prompt for this mode
       const systemPrompt = getSystemPrompt(validMode);
@@ -154,7 +149,7 @@ export function createEnhanceHandler(): (
           systemPrompt,
           maxTurns: 1,
           allowedTools: [],
-          permissionMode: "acceptEdits",
+          permissionMode: 'acceptEdits',
         },
       });
 
@@ -162,18 +157,16 @@ export function createEnhanceHandler(): (
       const enhancedText = await extractTextFromStream(stream);
 
       if (!enhancedText || enhancedText.trim().length === 0) {
-        logger.warn("Received empty response from Claude");
+        logger.warn('Received empty response from Claude');
         const response: EnhanceErrorResponse = {
           success: false,
-          error: "Failed to generate enhanced text - empty response",
+          error: 'Failed to generate enhanced text - empty response',
         };
         res.status(500).json(response);
         return;
       }
 
-      logger.info(
-        `Enhancement complete, output length: ${enhancedText.length} chars`
-      );
+      logger.info(`Enhancement complete, output length: ${enhancedText.length} chars`);
 
       const response: EnhanceSuccessResponse = {
         success: true,
@@ -181,9 +174,8 @@ export function createEnhanceHandler(): (
       };
       res.json(response);
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error occurred";
-      logger.error("Enhancement failed:", errorMessage);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      logger.error('Enhancement failed:', errorMessage);
 
       const response: EnhanceErrorResponse = {
         success: false,

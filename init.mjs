@@ -2,7 +2,7 @@
 
 /**
  * Automaker - Cross-Platform Development Environment Setup and Launch Script
- * 
+ *
  * This script works on Windows, macOS, and Linux.
  */
 
@@ -59,7 +59,11 @@ function printHeader() {
  */
 function execCommand(command, options = {}) {
   try {
-    return execSync(command, { encoding: 'utf8', stdio: 'pipe', ...options }).trim();
+    return execSync(command, {
+      encoding: 'utf8',
+      stdio: 'pipe',
+      ...options,
+    }).trim();
   } catch {
     return null;
   }
@@ -94,7 +98,7 @@ function getProcessesOnPort(port) {
     try {
       const output = execCommand(`lsof -ti:${port}`);
       if (output) {
-        output.split('\n').forEach(pid => {
+        output.split('\n').forEach((pid) => {
           const parsed = parseInt(pid.trim(), 10);
           if (parsed > 0) pids.add(parsed);
         });
@@ -158,7 +162,7 @@ async function killPort(port) {
  * Sleep for a given number of milliseconds
  */
 function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
@@ -287,17 +291,26 @@ async function main() {
   // Install Playwright browsers from apps/ui where @playwright/test is installed
   log('Checking Playwright browsers...', 'yellow');
   try {
-    await new Promise((resolve) => {
+    const exitCode = await new Promise((resolve) => {
       const playwright = crossSpawn(
         'npx',
         ['playwright', 'install', 'chromium'],
-        { stdio: 'ignore', cwd: path.join(__dirname, 'apps', 'ui') }
+        { stdio: 'inherit', cwd: path.join(__dirname, 'apps', 'ui') }
       );
-      playwright.on('close', () => resolve());
-      playwright.on('error', () => resolve());
+      playwright.on('close', (code) => resolve(code));
+      playwright.on('error', () => resolve(1));
     });
+
+    if (exitCode === 0) {
+      log('Playwright browsers ready', 'green');
+    } else {
+      log(
+        'Playwright installation failed (browser automation may not work)',
+        'yellow'
+      );
+    }
   } catch {
-    // Ignore errors - Playwright install is optional
+    log('Playwright installation skipped', 'yellow');
   }
 
   // Kill any existing processes on required ports
@@ -323,7 +336,7 @@ async function main() {
     await cleanup();
     process.exit(0);
   };
-  
+
   process.on('SIGINT', () => handleExit('SIGINT'));
   process.on('SIGTERM', () => handleExit('SIGTERM'));
 
@@ -344,7 +357,9 @@ async function main() {
       }
 
       // Start server in background
-      const logStream = fs.createWriteStream(path.join(__dirname, 'logs', 'server.log'));
+      const logStream = fs.createWriteStream(
+        path.join(__dirname, 'logs', 'server.log')
+      );
       serverProcess = runNpm(['run', 'dev:server'], {
         stdio: ['ignore', 'pipe', 'pipe'],
       });
@@ -377,7 +392,10 @@ async function main() {
       }
 
       log('✓ Server is ready!', 'green');
-      log(`The application will be available at: http://localhost:3007`, 'green');
+      log(
+        `The application will be available at: http://localhost:3007`,
+        'green'
+      );
       console.log('');
 
       // Start web app
@@ -411,4 +429,3 @@ main().catch((err) => {
   cleanup();
   process.exit(1);
 });
-

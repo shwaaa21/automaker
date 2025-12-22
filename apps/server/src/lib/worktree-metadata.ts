@@ -3,8 +3,8 @@
  * Stores worktree-specific data in .automaker/worktrees/:branch/worktree.json
  */
 
-import * as fs from "fs/promises";
-import * as path from "path";
+import * as secureFs from './secure-fs.js';
+import * as path from 'path';
 
 /** Maximum length for sanitized branch names in filesystem paths */
 const MAX_SANITIZED_BRANCH_PATH_LENGTH = 200;
@@ -32,11 +32,11 @@ function sanitizeBranchName(branch: string): string {
   // - Windows invalid chars: : * ? " < > |
   // - Other potentially problematic chars
   let safeBranch = branch
-    .replace(/[/\\:*?"<>|]/g, "-")  // Replace invalid chars with dash
-    .replace(/\s+/g, "_")           // Replace spaces with underscores
-    .replace(/\.+$/g, "")           // Remove trailing dots (Windows issue)
-    .replace(/-+/g, "-")            // Collapse multiple dashes
-    .replace(/^-|-$/g, "");         // Remove leading/trailing dashes
+    .replace(/[/\\:*?"<>|]/g, '-') // Replace invalid chars with dash
+    .replace(/\s+/g, '_') // Replace spaces with underscores
+    .replace(/\.+$/g, '') // Remove trailing dots (Windows issue)
+    .replace(/-+/g, '-') // Collapse multiple dashes
+    .replace(/^-|-$/g, ''); // Remove leading/trailing dashes
 
   // Truncate to safe length (leave room for path components)
   safeBranch = safeBranch.substring(0, MAX_SANITIZED_BRANCH_PATH_LENGTH);
@@ -44,7 +44,7 @@ function sanitizeBranchName(branch: string): string {
   // Handle Windows reserved names (CON, PRN, AUX, NUL, COM1-9, LPT1-9)
   const windowsReserved = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i;
   if (windowsReserved.test(safeBranch) || safeBranch.length === 0) {
-    safeBranch = `_${safeBranch || "branch"}`;
+    safeBranch = `_${safeBranch || 'branch'}`;
   }
 
   return safeBranch;
@@ -55,14 +55,14 @@ function sanitizeBranchName(branch: string): string {
  */
 function getWorktreeMetadataDir(projectPath: string, branch: string): string {
   const safeBranch = sanitizeBranchName(branch);
-  return path.join(projectPath, ".automaker", "worktrees", safeBranch);
+  return path.join(projectPath, '.automaker', 'worktrees', safeBranch);
 }
 
 /**
  * Get the path to the worktree metadata file
  */
 function getWorktreeMetadataPath(projectPath: string, branch: string): string {
-  return path.join(getWorktreeMetadataDir(projectPath, branch), "worktree.json");
+  return path.join(getWorktreeMetadataDir(projectPath, branch), 'worktree.json');
 }
 
 /**
@@ -74,7 +74,7 @@ export async function readWorktreeMetadata(
 ): Promise<WorktreeMetadata | null> {
   try {
     const metadataPath = getWorktreeMetadataPath(projectPath, branch);
-    const content = await fs.readFile(metadataPath, "utf-8");
+    const content = (await secureFs.readFile(metadataPath, 'utf-8')) as string;
     return JSON.parse(content) as WorktreeMetadata;
   } catch (error) {
     // File doesn't exist or can't be read
@@ -94,10 +94,10 @@ export async function writeWorktreeMetadata(
   const metadataPath = getWorktreeMetadataPath(projectPath, branch);
 
   // Ensure directory exists
-  await fs.mkdir(metadataDir, { recursive: true });
+  await secureFs.mkdir(metadataDir, { recursive: true });
 
   // Write metadata
-  await fs.writeFile(metadataPath, JSON.stringify(metadata, null, 2), "utf-8");
+  await secureFs.writeFile(metadataPath, JSON.stringify(metadata, null, 2), 'utf-8');
 }
 
 /**
@@ -143,16 +143,16 @@ export async function readAllWorktreeMetadata(
   projectPath: string
 ): Promise<Map<string, WorktreeMetadata>> {
   const result = new Map<string, WorktreeMetadata>();
-  const worktreesDir = path.join(projectPath, ".automaker", "worktrees");
+  const worktreesDir = path.join(projectPath, '.automaker', 'worktrees');
 
   try {
-    const dirs = await fs.readdir(worktreesDir, { withFileTypes: true });
+    const dirs = await secureFs.readdir(worktreesDir, { withFileTypes: true });
 
     for (const dir of dirs) {
       if (dir.isDirectory()) {
-        const metadataPath = path.join(worktreesDir, dir.name, "worktree.json");
+        const metadataPath = path.join(worktreesDir, dir.name, 'worktree.json');
         try {
-          const content = await fs.readFile(metadataPath, "utf-8");
+          const content = (await secureFs.readFile(metadataPath, 'utf-8')) as string;
           const metadata = JSON.parse(content) as WorktreeMetadata;
           result.set(metadata.branch, metadata);
         } catch {
@@ -170,13 +170,10 @@ export async function readAllWorktreeMetadata(
 /**
  * Delete worktree metadata for a branch
  */
-export async function deleteWorktreeMetadata(
-  projectPath: string,
-  branch: string
-): Promise<void> {
+export async function deleteWorktreeMetadata(projectPath: string, branch: string): Promise<void> {
   const metadataDir = getWorktreeMetadataDir(projectPath, branch);
   try {
-    await fs.rm(metadataDir, { recursive: true, force: true });
+    await secureFs.rm(metadataDir, { recursive: true, force: true });
   } catch {
     // Ignore errors if directory doesn't exist
   }

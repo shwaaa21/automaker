@@ -1,26 +1,26 @@
-import { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import {
   PointerSensor,
   useSensor,
   useSensors,
   rectIntersection,
   pointerWithin,
-} from "@dnd-kit/core";
-import { useAppStore, Feature } from "@/store/app-store";
-import { getElectronAPI } from "@/lib/electron";
-import type { AutoModeEvent } from "@/types/electron";
-import { pathsEqual } from "@/lib/utils";
-import { getBlockingDependencies } from "@/lib/dependency-resolver";
-import { BoardBackgroundModal } from "@/components/dialogs/board-background-modal";
-import { RefreshCw } from "lucide-react";
-import { useAutoMode } from "@/hooks/use-auto-mode";
-import { useKeyboardShortcutsConfig } from "@/hooks/use-keyboard-shortcuts";
-import { useWindowState } from "@/hooks/use-window-state";
+} from '@dnd-kit/core';
+import { useAppStore, Feature } from '@/store/app-store';
+import { getElectronAPI } from '@/lib/electron';
+import type { AutoModeEvent } from '@/types/electron';
+import { pathsEqual } from '@/lib/utils';
+import { getBlockingDependencies } from '@automaker/dependency-resolver';
+import { BoardBackgroundModal } from '@/components/dialogs/board-background-modal';
+import { RefreshCw } from 'lucide-react';
+import { useAutoMode } from '@/hooks/use-auto-mode';
+import { useKeyboardShortcutsConfig } from '@/hooks/use-keyboard-shortcuts';
+import { useWindowState } from '@/hooks/use-window-state';
 // Board-view specific imports
-import { BoardHeader } from "./board-view/board-header";
-import { BoardSearchBar } from "./board-view/board-search-bar";
-import { BoardControls } from "./board-view/board-controls";
-import { KanbanBoard } from "./board-view/kanban-board";
+import { BoardHeader } from './board-view/board-header';
+import { BoardSearchBar } from './board-view/board-search-bar';
+import { BoardControls } from './board-view/board-controls';
+import { KanbanBoard } from './board-view/kanban-board';
 import {
   AddFeatureDialog,
   AgentOutputModal,
@@ -31,15 +31,15 @@ import {
   FeatureSuggestionsDialog,
   FollowUpDialog,
   PlanApprovalDialog,
-} from "./board-view/dialogs";
-import { CreateWorktreeDialog } from "./board-view/dialogs/create-worktree-dialog";
-import { DeleteWorktreeDialog } from "./board-view/dialogs/delete-worktree-dialog";
-import { CommitWorktreeDialog } from "./board-view/dialogs/commit-worktree-dialog";
-import { CreatePRDialog } from "./board-view/dialogs/create-pr-dialog";
-import { CreateBranchDialog } from "./board-view/dialogs/create-branch-dialog";
-import { WorktreePanel } from "./board-view/worktree-panel";
-import type { PRInfo, WorktreeInfo } from "./board-view/worktree-panel/types";
-import { COLUMNS } from "./board-view/constants";
+} from './board-view/dialogs';
+import { CreateWorktreeDialog } from './board-view/dialogs/create-worktree-dialog';
+import { DeleteWorktreeDialog } from './board-view/dialogs/delete-worktree-dialog';
+import { CommitWorktreeDialog } from './board-view/dialogs/commit-worktree-dialog';
+import { CreatePRDialog } from './board-view/dialogs/create-pr-dialog';
+import { CreateBranchDialog } from './board-view/dialogs/create-branch-dialog';
+import { WorktreePanel } from './board-view/worktree-panel';
+import type { PRInfo, WorktreeInfo } from './board-view/worktree-panel/types';
+import { COLUMNS } from './board-view/constants';
 import {
   useBoardFeatures,
   useBoardDragDrop,
@@ -51,12 +51,10 @@ import {
   useBoardPersistence,
   useFollowUpState,
   useSuggestionsState,
-} from "./board-view/hooks";
+} from './board-view/hooks';
 
 // Stable empty array to avoid infinite loop in selector
-const EMPTY_WORKTREES: ReturnType<
-  ReturnType<typeof useAppStore.getState>["getWorktrees"]
-> = [];
+const EMPTY_WORKTREES: ReturnType<ReturnType<typeof useAppStore.getState>['getWorktrees']> = [];
 
 /** Delay before starting a newly created feature to allow state to settle */
 const FEATURE_CREATION_SETTLE_DELAY_MS = 500;
@@ -98,26 +96,18 @@ export function BoardView() {
   const [isMounted, setIsMounted] = useState(false);
   const [showOutputModal, setShowOutputModal] = useState(false);
   const [outputFeature, setOutputFeature] = useState<Feature | null>(null);
-  const [featuresWithContext, setFeaturesWithContext] = useState<Set<string>>(
-    new Set()
-  );
-  const [showArchiveAllVerifiedDialog, setShowArchiveAllVerifiedDialog] =
-    useState(false);
-  const [showBoardBackgroundModal, setShowBoardBackgroundModal] =
-    useState(false);
+  const [featuresWithContext, setFeaturesWithContext] = useState<Set<string>>(new Set());
+  const [showArchiveAllVerifiedDialog, setShowArchiveAllVerifiedDialog] = useState(false);
+  const [showBoardBackgroundModal, setShowBoardBackgroundModal] = useState(false);
   const [showCompletedModal, setShowCompletedModal] = useState(false);
-  const [deleteCompletedFeature, setDeleteCompletedFeature] =
-    useState<Feature | null>(null);
+  const [deleteCompletedFeature, setDeleteCompletedFeature] = useState<Feature | null>(null);
   // State for viewing plan in read-only mode
   const [viewPlanFeature, setViewPlanFeature] = useState<Feature | null>(null);
 
   // Worktree dialog states
-  const [showCreateWorktreeDialog, setShowCreateWorktreeDialog] =
-    useState(false);
-  const [showDeleteWorktreeDialog, setShowDeleteWorktreeDialog] =
-    useState(false);
-  const [showCommitWorktreeDialog, setShowCommitWorktreeDialog] =
-    useState(false);
+  const [showCreateWorktreeDialog, setShowCreateWorktreeDialog] = useState(false);
+  const [showDeleteWorktreeDialog, setShowDeleteWorktreeDialog] = useState(false);
+  const [showCommitWorktreeDialog, setShowCommitWorktreeDialog] = useState(false);
   const [showCreatePRDialog, setShowCreatePRDialog] = useState(false);
   const [showCreateBranchDialog, setShowCreateBranchDialog] = useState(false);
   const [selectedWorktreeForAction, setSelectedWorktreeForAction] = useState<{
@@ -158,7 +148,7 @@ export function BoardView() {
     closeSuggestionsDialog,
   } = useSuggestionsState();
   // Search filter for Kanban cards
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
   // Plan approval loading state
   const [isPlanApprovalLoading, setIsPlanApprovalLoading] = useState(false);
   // Derive spec creation state from store - check if current project is the one being created
@@ -175,14 +165,11 @@ export function BoardView() {
           return false;
         }
 
-        const result = await api.autoMode.contextExists(
-          currentProject.path,
-          featureId
-        );
+        const result = await api.autoMode.contextExists(currentProject.path, featureId);
 
         return result.success && result.exists === true;
       } catch (error) {
-        console.error("[Board] Error checking context:", error);
+        console.error('[Board] Error checking context:', error);
         return false;
       }
     },
@@ -228,9 +215,7 @@ export function BoardView() {
 
   // Get unique categories from existing features AND persisted categories for autocomplete suggestions
   const categorySuggestions = useMemo(() => {
-    const featureCategories = hookFeatures
-      .map((f) => f.category)
-      .filter(Boolean);
+    const featureCategories = hookFeatures.map((f) => f.category).filter(Boolean);
     // Merge feature categories with persisted categories
     const allCategories = [...featureCategories, ...persistedCategories];
     return [...new Set(allCategories)].sort();
@@ -264,7 +249,7 @@ export function BoardView() {
           setBranchSuggestions(localBranches);
         }
       } catch (error) {
-        console.error("[BoardView] Error fetching branches:", error);
+        console.error('[BoardView] Error fetching branches:', error);
         setBranchSuggestions([]);
       }
     };
@@ -276,8 +261,8 @@ export function BoardView() {
   const branchCardCounts = useMemo(() => {
     return hookFeatures.reduce(
       (counts, feature) => {
-        if (feature.status !== "completed") {
-          const branch = feature.branchName ?? "main";
+        if (feature.status !== 'completed') {
+          const branch = feature.branchName ?? 'main';
           counts[branch] = (counts[branch] || 0) + 1;
         }
         return counts;
@@ -304,8 +289,9 @@ export function BoardView() {
   }, []);
 
   // Use persistence hook
-  const { persistFeatureCreate, persistFeatureUpdate, persistFeatureDelete } =
-    useBoardPersistence({ currentProject });
+  const { persistFeatureCreate, persistFeatureUpdate, persistFeatureDelete } = useBoardPersistence({
+    currentProject,
+  });
 
   // Memoize the removed worktrees handler to prevent infinite loops
   const handleRemovedWorktrees = useCallback(
@@ -332,15 +318,13 @@ export function BoardView() {
   const inProgressFeaturesForShortcuts = useMemo(() => {
     return hookFeatures.filter((f) => {
       const isRunning = runningAutoTasks.includes(f.id);
-      return isRunning || f.status === "in_progress";
+      return isRunning || f.status === 'in_progress';
     });
   }, [hookFeatures, runningAutoTasks]);
 
   // Get current worktree info (path) for filtering features
   // This needs to be before useBoardActions so we can pass currentWorktreeBranch
-  const currentWorktreeInfo = currentProject
-    ? getCurrentWorktree(currentProject.path)
-    : null;
+  const currentWorktreeInfo = currentProject ? getCurrentWorktree(currentProject.path) : null;
   const currentWorktreePath = currentWorktreeInfo?.path ?? null;
   const worktreesByProject = useAppStore((s) => s.worktreesByProject);
   const worktrees = useMemo(
@@ -359,9 +343,7 @@ export function BoardView() {
       return worktrees.find((w) => w.isMain);
     } else {
       // Specific worktree selected - find it by path
-      return worktrees.find(
-        (w) => !w.isMain && pathsEqual(w.path, currentWorktreePath)
-      );
+      return worktrees.find((w) => !w.isMain && pathsEqual(w.path, currentWorktreePath));
     }
   }, [worktrees, currentWorktreePath]);
 
@@ -371,7 +353,7 @@ export function BoardView() {
   // Get the branch for the currently selected worktree (for defaulting new features)
   // Use the branch from selectedWorktree, or fall back to main worktree's branch
   const selectedWorktreeBranch =
-    currentWorktreeBranch || worktrees.find((w) => w.isMain)?.branch || "main";
+    currentWorktreeBranch || worktrees.find((w) => w.isMain)?.branch || 'main';
 
   // Extract all action handlers into a hook
   const {
@@ -418,6 +400,26 @@ export function BoardView() {
     outputFeature,
     projectPath: currentProject?.path || null,
     onWorktreeCreated: () => setWorktreeRefreshKey((k) => k + 1),
+    onWorktreeAutoSelect: (newWorktree) => {
+      if (!currentProject) return;
+      // Check if worktree already exists in the store (by branch name)
+      const currentWorktrees = getWorktrees(currentProject.path);
+      const existingWorktree = currentWorktrees.find((w) => w.branch === newWorktree.branch);
+
+      // Only add if it doesn't already exist (to avoid duplicates)
+      if (!existingWorktree) {
+        const newWorktreeInfo = {
+          path: newWorktree.path,
+          branch: newWorktree.branch,
+          isMain: false,
+          isCurrent: false,
+          hasWorktree: true,
+        };
+        setWorktrees(currentProject.path, [...currentWorktrees, newWorktreeInfo]);
+      }
+      // Select the worktree (whether it existed or was just added)
+      setCurrentWorktree(currentProject.path, newWorktree.path, newWorktree.branch);
+    },
     currentWorktreeBranch,
   });
 
@@ -431,17 +433,17 @@ export function BoardView() {
 
       // Create the feature
       const featureData = {
-        category: "PR Review",
+        category: 'PR Review',
         description,
         steps: [],
         images: [],
         imagePaths: [],
         skipTests: defaultSkipTests,
-        model: "opus" as const,
-        thinkingLevel: "none" as const,
+        model: 'opus' as const,
+        thinkingLevel: 'none' as const,
         branchName: worktree.branch,
         priority: 1, // High priority for PR feedback
-        planningMode: "skip" as const,
+        planningMode: 'skip' as const,
         requirePlanApproval: false,
       };
 
@@ -454,7 +456,7 @@ export function BoardView() {
         const newFeature = latestFeatures.find(
           (f) =>
             f.branchName === worktree.branch &&
-            f.status === "backlog" &&
+            f.status === 'backlog' &&
             f.description.includes(`PR #${prNumber}`)
         );
 
@@ -473,17 +475,17 @@ export function BoardView() {
 
       // Create the feature
       const featureData = {
-        category: "Maintenance",
+        category: 'Maintenance',
         description,
         steps: [],
         images: [],
         imagePaths: [],
         skipTests: defaultSkipTests,
-        model: "opus" as const,
-        thinkingLevel: "none" as const,
+        model: 'opus' as const,
+        thinkingLevel: 'none' as const,
         branchName: worktree.branch,
         priority: 1, // High priority for conflict resolution
-        planningMode: "skip" as const,
+        planningMode: 'skip' as const,
         requirePlanApproval: false,
       };
 
@@ -495,8 +497,8 @@ export function BoardView() {
         const newFeature = latestFeatures.find(
           (f) =>
             f.branchName === worktree.branch &&
-            f.status === "backlog" &&
-            f.description.includes("Pull latest from origin/main")
+            f.status === 'backlog' &&
+            f.description.includes('Pull latest from origin/main')
         );
 
         if (newFeature) {
@@ -544,22 +546,21 @@ export function BoardView() {
       if (!currentProject) return;
 
       // Only process events for the current project
-      const eventProjectPath =
-        "projectPath" in event ? event.projectPath : undefined;
+      const eventProjectPath = 'projectPath' in event ? event.projectPath : undefined;
       if (eventProjectPath && eventProjectPath !== currentProject.path) {
         return;
       }
 
       switch (event.type) {
-        case "auto_mode_feature_start":
+        case 'auto_mode_feature_start':
           // Feature is now confirmed running - remove from pending
           if (event.featureId) {
             pendingFeaturesRef.current.delete(event.featureId);
           }
           break;
 
-        case "auto_mode_feature_complete":
-        case "auto_mode_error":
+        case 'auto_mode_feature_complete':
+        case 'auto_mode_error':
           // Feature completed or errored - remove from pending if still there
           if (event.featureId) {
             pendingFeaturesRef.current.delete(event.featureId);
@@ -600,8 +601,7 @@ export function BoardView() {
 
         // Count currently running tasks + pending features
         // Use ref to get the latest running tasks without causing effect re-runs
-        const currentRunning =
-          runningAutoTasksRef.current.length + pendingFeaturesRef.current.size;
+        const currentRunning = runningAutoTasksRef.current.length + pendingFeaturesRef.current.size;
         const availableSlots = maxConcurrency - currentRunning;
 
         // No available slots, skip check
@@ -614,7 +614,7 @@ export function BoardView() {
         // Use ref to get the latest features without causing effect re-runs
         const currentFeatures = hookFeaturesRef.current;
         const backlogFeatures = currentFeatures.filter((f) => {
-          if (f.status !== "backlog") return false;
+          if (f.status !== 'backlog') return false;
 
           const featureBranch = f.branchName;
 
@@ -671,9 +671,8 @@ export function BoardView() {
           // If feature has no branchName and primary worktree is selected, assign primary branch
           if (currentWorktreePath === null && !feature.branchName) {
             const primaryBranch =
-              (currentProject.path
-                ? getPrimaryWorktreeBranch(currentProject.path)
-                : null) || "main";
+              (currentProject.path ? getPrimaryWorktreeBranch(currentProject.path) : null) ||
+              'main';
             await persistFeatureUpdate(feature.id, {
               branchName: primaryBranch,
             });
@@ -699,7 +698,7 @@ export function BoardView() {
 
     // Check immediately, then every 3 seconds
     checkAndStartFeatures();
-    const interval = setInterval(checkAndStartFeatures, 1000);
+    const interval = setInterval(checkAndStartFeatures, 3000);
 
     return () => {
       // Mark as inactive to prevent any pending async operations from continuing
@@ -759,9 +758,7 @@ export function BoardView() {
   // Find feature for pending plan approval
   const pendingApprovalFeature = useMemo(() => {
     if (!pendingPlanApproval) return null;
-    return (
-      hookFeatures.find((f) => f.id === pendingPlanApproval.featureId) || null
-    );
+    return hookFeatures.find((f) => f.id === pendingPlanApproval.featureId) || null;
   }, [pendingPlanApproval, hookFeatures]);
 
   // Handle plan approval
@@ -774,7 +771,7 @@ export function BoardView() {
       try {
         const api = getElectronAPI();
         if (!api?.autoMode?.approvePlan) {
-          throw new Error("Plan approval API not available");
+          throw new Error('Plan approval API not available');
         }
 
         const result = await api.autoMode.approvePlan(
@@ -790,7 +787,7 @@ export function BoardView() {
           const currentFeature = hookFeatures.find((f) => f.id === featureId);
           updateFeature(featureId, {
             planSpec: {
-              status: "approved",
+              status: 'approved',
               content: editedPlan || pendingPlanApproval.planContent,
               version: currentFeature?.planSpec?.version || 1,
               approvedAt: new Date().toISOString(),
@@ -800,10 +797,10 @@ export function BoardView() {
           // Reload features from server to ensure sync
           loadFeatures();
         } else {
-          console.error("[Board] Failed to approve plan:", result.error);
+          console.error('[Board] Failed to approve plan:', result.error);
         }
       } catch (error) {
-        console.error("[Board] Error approving plan:", error);
+        console.error('[Board] Error approving plan:', error);
       } finally {
         setIsPlanApprovalLoading(false);
         setPendingPlanApproval(null);
@@ -829,7 +826,7 @@ export function BoardView() {
       try {
         const api = getElectronAPI();
         if (!api?.autoMode?.approvePlan) {
-          throw new Error("Plan approval API not available");
+          throw new Error('Plan approval API not available');
         }
 
         const result = await api.autoMode.approvePlan(
@@ -845,9 +842,9 @@ export function BoardView() {
           // Get current feature to preserve version
           const currentFeature = hookFeatures.find((f) => f.id === featureId);
           updateFeature(featureId, {
-            status: "backlog",
+            status: 'backlog',
             planSpec: {
-              status: "rejected",
+              status: 'rejected',
               content: pendingPlanApproval.planContent,
               version: currentFeature?.planSpec?.version || 1,
               reviewedByUser: true,
@@ -856,10 +853,10 @@ export function BoardView() {
           // Reload features from server to ensure sync
           loadFeatures();
         } else {
-          console.error("[Board] Failed to reject plan:", result.error);
+          console.error('[Board] Failed to reject plan:', result.error);
         }
       } catch (error) {
-        console.error("[Board] Error rejecting plan:", error);
+        console.error('[Board] Error rejecting plan:', error);
       } finally {
         setIsPlanApprovalLoading(false);
         setPendingPlanApproval(null);
@@ -882,8 +879,8 @@ export function BoardView() {
 
       // Determine the planning mode for approval (skip should never have a plan requiring approval)
       const mode = feature.planningMode;
-      const approvalMode: "lite" | "spec" | "full" =
-        mode === "lite" || mode === "spec" || mode === "full" ? mode : "spec";
+      const approvalMode: 'lite' | 'spec' | 'full' =
+        mode === 'lite' || mode === 'spec' || mode === 'full' ? mode : 'spec';
 
       // Re-open the approval dialog with the feature's plan data
       setPendingPlanApproval({
@@ -898,10 +895,7 @@ export function BoardView() {
 
   if (!currentProject) {
     return (
-      <div
-        className="flex-1 flex items-center justify-center"
-        data-testid="board-view-no-project"
-      >
+      <div className="flex-1 flex items-center justify-center" data-testid="board-view-no-project">
         <p className="text-muted-foreground">No project selected</p>
       </div>
     );
@@ -909,10 +903,7 @@ export function BoardView() {
 
   if (isLoading) {
     return (
-      <div
-        className="flex-1 flex items-center justify-center"
-        data-testid="board-view-loading"
-      >
+      <div className="flex-1 flex items-center justify-center" data-testid="board-view-loading">
         <RefreshCw className="w-6 h-6 animate-spin text-muted-foreground" />
       </div>
     );
@@ -941,7 +932,7 @@ export function BoardView() {
         addFeatureShortcut={{
           key: shortcuts.addFeature,
           action: () => setShowAddDialog(true),
-          description: "Add new feature",
+          description: 'Add new feature',
         }}
         isMounted={isMounted}
       />
@@ -1096,8 +1087,8 @@ export function BoardView() {
       <AgentOutputModal
         open={showOutputModal}
         onClose={() => setShowOutputModal(false)}
-        featureDescription={outputFeature?.description || ""}
-        featureId={outputFeature?.id || ""}
+        featureDescription={outputFeature?.description || ''}
+        featureId={outputFeature?.id || ''}
         featureStatus={outputFeature?.status}
         onNumberKeyPress={handleOutputModalNumberKeyPress}
       />
@@ -1106,7 +1097,7 @@ export function BoardView() {
       <ArchiveAllVerifiedDialog
         open={showArchiveAllVerifiedDialog}
         onOpenChange={setShowArchiveAllVerifiedDialog}
-        verifiedCount={getColumnFeatures("verified").length}
+        verifiedCount={getColumnFeatures('verified').length}
         onConfirm={async () => {
           await handleArchiveAllVerified();
           setShowArchiveAllVerifiedDialog(false);
@@ -1148,7 +1139,7 @@ export function BoardView() {
           }
         }}
         feature={pendingApprovalFeature}
-        planContent={pendingPlanApproval?.planContent || ""}
+        planContent={pendingPlanApproval?.planContent || ''}
         onApprove={handlePlanApprove}
         onReject={handlePlanReject}
         isLoading={isPlanApprovalLoading}
@@ -1183,17 +1174,10 @@ export function BoardView() {
             isCurrent: false,
             hasWorktree: true,
           };
-          setWorktrees(currentProject.path, [
-            ...currentWorktrees,
-            newWorktreeInfo,
-          ]);
+          setWorktrees(currentProject.path, [...currentWorktrees, newWorktreeInfo]);
 
           // Now set the current worktree with both path and branch
-          setCurrentWorktree(
-            currentProject.path,
-            newWorktree.path,
-            newWorktree.branch
-          );
+          setCurrentWorktree(currentProject.path, newWorktree.path, newWorktree.branch);
 
           // Trigger refresh to get full worktree details (hasChanges, etc.)
           setWorktreeRefreshKey((k) => k + 1);
@@ -1208,9 +1192,7 @@ export function BoardView() {
         worktree={selectedWorktreeForAction}
         affectedFeatureCount={
           selectedWorktreeForAction
-            ? hookFeatures.filter(
-                (f) => f.branchName === selectedWorktreeForAction.branch
-              ).length
+            ? hookFeatures.filter((f) => f.branchName === selectedWorktreeForAction.branch).length
             : 0
         }
         onDeleted={(deletedWorktree, _deletedBranch) => {
@@ -1262,9 +1244,7 @@ export function BoardView() {
 
             // Persist changes asynchronously and in parallel
             Promise.all(
-              featuresToUpdate.map((feature) =>
-                persistFeatureUpdate(feature.id, { prUrl })
-              )
+              featuresToUpdate.map((feature) => persistFeatureUpdate(feature.id, { prUrl }))
             ).catch(console.error);
           }
           setWorktreeRefreshKey((k) => k + 1);

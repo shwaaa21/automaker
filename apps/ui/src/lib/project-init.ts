@@ -5,7 +5,7 @@
  * new or existing projects.
  */
 
-import { getElectronAPI } from "./electron";
+import { getElectronAPI } from './electron';
 
 export interface ProjectInitResult {
   success: boolean;
@@ -23,14 +23,9 @@ const REQUIRED_STRUCTURE: {
   directories: string[];
   files: Record<string, string>;
 } = {
-  directories: [
-    ".automaker",
-    ".automaker/context",
-    ".automaker/features",
-    ".automaker/images",
-  ],
+  directories: ['.automaker', '.automaker/context', '.automaker/features', '.automaker/images'],
   files: {
-    ".automaker/categories.json": "[]",
+    '.automaker/categories.json': '[]',
   },
 };
 
@@ -40,37 +35,63 @@ const REQUIRED_STRUCTURE: {
  * @param projectPath - The root path of the project
  * @returns Result indicating what was created or if the project was already initialized
  */
-export async function initializeProject(
-  projectPath: string
-): Promise<ProjectInitResult> {
+export async function initializeProject(projectPath: string): Promise<ProjectInitResult> {
   const api = getElectronAPI();
   const createdFiles: string[] = [];
   const existingFiles: string[] = [];
 
   try {
+    // Validate that the project directory exists and is a directory
+    const projectExists = await api.exists(projectPath);
+    if (!projectExists) {
+      return {
+        success: false,
+        isNewProject: false,
+        error: `Project directory does not exist: ${projectPath}. Create it first before initializing.`,
+      };
+    }
+
+    // Verify it's actually a directory (not a file)
+    const projectStat = await api.stat(projectPath);
+    if (!projectStat.success) {
+      return {
+        success: false,
+        isNewProject: false,
+        error: projectStat.error || `Failed to stat project directory: ${projectPath}`,
+      };
+    }
+
+    if (projectStat.stats && !projectStat.stats.isDirectory) {
+      return {
+        success: false,
+        isNewProject: false,
+        error: `Project path is not a directory: ${projectPath}`,
+      };
+    }
+
     // Initialize git repository if it doesn't exist
     const gitDirExists = await api.exists(`${projectPath}/.git`);
     if (!gitDirExists) {
-      console.log("[project-init] Initializing git repository...");
+      console.log('[project-init] Initializing git repository...');
       try {
         // Initialize git and create an initial empty commit via server route
         const result = await api.worktree?.initGit(projectPath);
         if (result?.success && result.result?.initialized) {
-          createdFiles.push(".git");
-          console.log("[project-init] Git repository initialized with initial commit");
+          createdFiles.push('.git');
+          console.log('[project-init] Git repository initialized with initial commit');
         } else if (result?.success && !result.result?.initialized) {
           // Git already existed (shouldn't happen since we checked, but handle it)
-          existingFiles.push(".git");
-          console.log("[project-init] Git repository already exists");
+          existingFiles.push('.git');
+          console.log('[project-init] Git repository already exists');
         } else {
-          console.warn("[project-init] Failed to initialize git repository:", result?.error);
+          console.warn('[project-init] Failed to initialize git repository:', result?.error);
         }
       } catch (gitError) {
-        console.warn("[project-init] Failed to initialize git repository:", gitError);
+        console.warn('[project-init] Failed to initialize git repository:', gitError);
         // Don't fail the whole initialization if git init fails
       }
     } else {
-      existingFiles.push(".git");
+      existingFiles.push('.git');
     }
 
     // Create all required directories
@@ -80,9 +101,7 @@ export async function initializeProject(
     }
 
     // Check and create required files
-    for (const [relativePath, defaultContent] of Object.entries(
-      REQUIRED_STRUCTURE.files
-    )) {
+    for (const [relativePath, defaultContent] of Object.entries(REQUIRED_STRUCTURE.files)) {
       const fullPath = `${projectPath}/${relativePath}`;
       const exists = await api.exists(fullPath);
 
@@ -95,8 +114,7 @@ export async function initializeProject(
     }
 
     // Determine if this is a new project (no files needed to be created since features/ is empty by default)
-    const isNewProject =
-      createdFiles.length === 0 && existingFiles.length === 0;
+    const isNewProject = createdFiles.length === 0 && existingFiles.length === 0;
 
     return {
       success: true,
@@ -105,11 +123,11 @@ export async function initializeProject(
       existingFiles,
     };
   } catch (error) {
-    console.error("[project-init] Failed to initialize project:", error);
+    console.error('[project-init] Failed to initialize project:', error);
     return {
       success: false,
       isNewProject: false,
-      error: error instanceof Error ? error.message : "Unknown error occurred",
+      error: error instanceof Error ? error.message : 'Unknown error occurred',
     };
   }
 }
@@ -120,9 +138,7 @@ export async function initializeProject(
  * @param projectPath - The root path of the project
  * @returns true if all required files/directories exist
  */
-export async function isProjectInitialized(
-  projectPath: string
-): Promise<boolean> {
+export async function isProjectInitialized(projectPath: string): Promise<boolean> {
   const api = getElectronAPI();
 
   try {
@@ -137,10 +153,7 @@ export async function isProjectInitialized(
 
     return true;
   } catch (error) {
-    console.error(
-      "[project-init] Error checking project initialization:",
-      error
-    );
+    console.error('[project-init] Error checking project initialization:', error);
     return false;
   }
 }
@@ -178,7 +191,7 @@ export async function getProjectInitStatus(projectPath: string): Promise<{
       existingFiles,
     };
   } catch (error) {
-    console.error("[project-init] Error getting project status:", error);
+    console.error('[project-init] Error getting project status:', error);
     return {
       initialized: false,
       missingFiles: REQUIRED_STRUCTURE.directories,
@@ -199,7 +212,7 @@ export async function hasAppSpec(projectPath: string): Promise<boolean> {
     const fullPath = `${projectPath}/.automaker/app_spec.txt`;
     return await api.exists(fullPath);
   } catch (error) {
-    console.error("[project-init] Error checking app_spec.txt:", error);
+    console.error('[project-init] Error checking app_spec.txt:', error);
     return false;
   }
 }
@@ -216,7 +229,7 @@ export async function hasAutomakerDir(projectPath: string): Promise<boolean> {
     const fullPath = `${projectPath}/.automaker`;
     return await api.exists(fullPath);
   } catch (error) {
-    console.error("[project-init] Error checking .automaker dir:", error);
+    console.error('[project-init] Error checking .automaker dir:', error);
     return false;
   }
 }

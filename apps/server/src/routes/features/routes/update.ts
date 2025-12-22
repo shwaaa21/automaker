@@ -2,12 +2,10 @@
  * POST /update endpoint - Update a feature
  */
 
-import type { Request, Response } from "express";
-import {
-  FeatureLoader,
-  type Feature,
-} from "../../../services/feature-loader.js";
-import { getErrorMessage, logError } from "../common.js";
+import type { Request, Response } from 'express';
+import { FeatureLoader } from '../../../services/feature-loader.js';
+import type { Feature } from '@automaker/types';
+import { getErrorMessage, logError } from '../common.js';
 
 export function createUpdateHandler(featureLoader: FeatureLoader) {
   return async (req: Request, res: Response): Promise<void> => {
@@ -21,19 +19,15 @@ export function createUpdateHandler(featureLoader: FeatureLoader) {
       if (!projectPath || !featureId || !updates) {
         res.status(400).json({
           success: false,
-          error: "projectPath, featureId, and updates are required",
+          error: 'projectPath, featureId, and updates are required',
         });
         return;
       }
 
-      const updated = await featureLoader.update(
-        projectPath,
-        featureId,
-        updates
-      );
+      const updated = await featureLoader.update(projectPath, featureId, updates);
       res.json({ success: true, feature: updated });
     } catch (error) {
-      logError(error, "Update feature failed");
+      logError(error, 'Update feature failed');
       res.status(500).json({ success: false, error: getErrorMessage(error) });
     }
   };

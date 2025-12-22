@@ -5,12 +5,9 @@
  * can switch between branches even after worktrees are removed.
  */
 
-import { readFile, writeFile } from "fs/promises";
-import path from "path";
-import {
-  getBranchTrackingPath,
-  ensureAutomakerDir,
-} from "../../../lib/automaker-paths.js";
+import * as secureFs from '../../../lib/secure-fs.js';
+import path from 'path';
+import { getBranchTrackingPath, ensureAutomakerDir } from '@automaker/platform';
 
 export interface TrackedBranch {
   name: string;
@@ -25,19 +22,17 @@ interface BranchTrackingData {
 /**
  * Read tracked branches from file
  */
-export async function getTrackedBranches(
-  projectPath: string
-): Promise<TrackedBranch[]> {
+export async function getTrackedBranches(projectPath: string): Promise<TrackedBranch[]> {
   try {
     const filePath = getBranchTrackingPath(projectPath);
-    const content = await readFile(filePath, "utf-8");
+    const content = (await secureFs.readFile(filePath, 'utf-8')) as string;
     const data: BranchTrackingData = JSON.parse(content);
     return data.branches || [];
   } catch (error: any) {
-    if (error.code === "ENOENT") {
+    if (error.code === 'ENOENT') {
       return [];
     }
-    console.warn("[branch-tracking] Failed to read tracked branches:", error);
+    console.warn('[branch-tracking] Failed to read tracked branches:', error);
     return [];
   }
 }
@@ -45,23 +40,17 @@ export async function getTrackedBranches(
 /**
  * Save tracked branches to file
  */
-async function saveTrackedBranches(
-  projectPath: string,
-  branches: TrackedBranch[]
-): Promise<void> {
+async function saveTrackedBranches(projectPath: string, branches: TrackedBranch[]): Promise<void> {
   const automakerDir = await ensureAutomakerDir(projectPath);
-  const filePath = path.join(automakerDir, "active-branches.json");
+  const filePath = path.join(automakerDir, 'active-branches.json');
   const data: BranchTrackingData = { branches };
-  await writeFile(filePath, JSON.stringify(data, null, 2), "utf-8");
+  await secureFs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8');
 }
 
 /**
  * Add a branch to tracking
  */
-export async function trackBranch(
-  projectPath: string,
-  branchName: string
-): Promise<void> {
+export async function trackBranch(projectPath: string, branchName: string): Promise<void> {
   const branches = await getTrackedBranches(projectPath);
 
   // Check if already tracked
@@ -82,10 +71,7 @@ export async function trackBranch(
 /**
  * Remove a branch from tracking
  */
-export async function untrackBranch(
-  projectPath: string,
-  branchName: string
-): Promise<void> {
+export async function untrackBranch(projectPath: string, branchName: string): Promise<void> {
   const branches = await getTrackedBranches(projectPath);
   const filtered = branches.filter((b) => b.name !== branchName);
 
@@ -114,10 +100,7 @@ export async function updateBranchActivation(
 /**
  * Check if a branch is tracked
  */
-export async function isBranchTracked(
-  projectPath: string,
-  branchName: string
-): Promise<boolean> {
+export async function isBranchTracked(projectPath: string, branchName: string): Promise<boolean> {
   const branches = await getTrackedBranches(projectPath);
   return branches.some((b) => b.name === branchName);
 }

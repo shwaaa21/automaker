@@ -2,29 +2,28 @@
  * POST /follow-up-feature endpoint - Follow up on a feature
  */
 
-import type { Request, Response } from "express";
-import type { AutoModeService } from "../../../services/auto-mode-service.js";
-import { createLogger } from "../../../lib/logger.js";
-import { getErrorMessage, logError } from "../common.js";
+import type { Request, Response } from 'express';
+import type { AutoModeService } from '../../../services/auto-mode-service.js';
+import { createLogger } from '@automaker/utils';
+import { getErrorMessage, logError } from '../common.js';
 
-const logger = createLogger("AutoMode");
+const logger = createLogger('AutoMode');
 
 export function createFollowUpFeatureHandler(autoModeService: AutoModeService) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
-      const { projectPath, featureId, prompt, imagePaths, useWorktrees } =
-        req.body as {
-          projectPath: string;
-          featureId: string;
-          prompt: string;
-          imagePaths?: string[];
-          useWorktrees?: boolean;
-        };
+      const { projectPath, featureId, prompt, imagePaths, useWorktrees } = req.body as {
+        projectPath: string;
+        featureId: string;
+        prompt: string;
+        imagePaths?: string[];
+        useWorktrees?: boolean;
+      };
 
       if (!projectPath || !featureId || !prompt) {
         res.status(400).json({
           success: false,
-          error: "projectPath, featureId, and prompt are required",
+          error: 'projectPath, featureId, and prompt are required',
         });
         return;
       }
@@ -32,18 +31,9 @@ export function createFollowUpFeatureHandler(autoModeService: AutoModeService) {
       // Start follow-up in background
       // followUpFeature derives workDir from feature.branchName
       autoModeService
-        .followUpFeature(
-          projectPath,
-          featureId,
-          prompt,
-          imagePaths,
-          useWorktrees ?? true
-        )
+        .followUpFeature(projectPath, featureId, prompt, imagePaths, useWorktrees ?? true)
         .catch((error) => {
-          logger.error(
-            `[AutoMode] Follow up feature ${featureId} error:`,
-            error
-          );
+          logger.error(`[AutoMode] Follow up feature ${featureId} error:`, error);
         })
         .finally(() => {
           // Release the starting slot when follow-up completes (success or error)
@@ -52,7 +42,7 @@ export function createFollowUpFeatureHandler(autoModeService: AutoModeService) {
 
       res.json({ success: true });
     } catch (error) {
-      logError(error, "Follow up feature failed");
+      logError(error, 'Follow up feature failed');
       res.status(500).json({ success: false, error: getErrorMessage(error) });
     }
   };

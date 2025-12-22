@@ -2,12 +2,12 @@
  * POST /clone endpoint - Clone a GitHub template to a new project directory
  */
 
-import type { Request, Response } from "express";
-import { spawn } from "child_process";
-import path from "path";
-import fs from "fs/promises";
-import { addAllowedPath } from "../../../lib/security.js";
-import { logger, getErrorMessage, logError } from "../common.js";
+import type { Request, Response } from 'express';
+import { spawn } from 'child_process';
+import path from 'path';
+import * as secureFs from '../../../lib/secure-fs.js';
+import { PathNotAllowedError } from '@automaker/platform';
+import { logger, getErrorMessage, logError } from '../common.js';
 
 export function createCloneHandler() {
   return async (req: Request, res: Response): Promise<void> => {
@@ -22,7 +22,7 @@ export function createCloneHandler() {
       if (!repoUrl || !projectName || !parentDir) {
         res.status(400).json({
           success: false,
-          error: "repoUrl, projectName, and parentDir are required",
+          error: 'repoUrl, projectName, and parentDir are required',
         });
         return;
       }
@@ -36,17 +36,15 @@ export function createCloneHandler() {
       if (!githubUrlPattern.test(repoUrl)) {
         res.status(400).json({
           success: false,
-          error: "Invalid GitHub repository URL",
+          error: 'Invalid GitHub repository URL',
         });
         return;
       }
 
       // Sanitize project name (allow alphanumeric, dash, underscore)
-      const sanitizedName = projectName.replace(/[^a-zA-Z0-9-_]/g, "-");
+      const sanitizedName = projectName.replace(/[^a-zA-Z0-9-_]/g, '-');
       if (sanitizedName !== projectName) {
-        logger.info(
-          `[Templates] Sanitized project name: ${projectName} -> ${sanitizedName}`
-        );
+        logger.info(`[Templates] Sanitized project name: ${projectName} -> ${sanitizedName}`);
       }
 
       // Build full project path
@@ -55,23 +53,30 @@ export function createCloneHandler() {
       const resolvedParent = path.resolve(parentDir);
       const resolvedProject = path.resolve(projectPath);
       const relativePath = path.relative(resolvedParent, resolvedProject);
-      if (relativePath.startsWith("..") || path.isAbsolute(relativePath)) {
+      if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
         res.status(400).json({
           success: false,
-          error: "Invalid project name; potential path traversal attempt.",
+          error: 'Invalid project name; potential path traversal attempt.',
         });
         return;
       }
 
-      // Check if directory already exists
+      // Check if directory already exists (secureFs.access also validates path is allowed)
       try {
-        await fs.access(projectPath);
+        await secureFs.access(projectPath);
         res.status(400).json({
           success: false,
           error: `Directory "${sanitizedName}" already exists in ${parentDir}`,
         });
         return;
-      } catch {
+      } catch (accessError) {
+        if (accessError instanceof PathNotAllowedError) {
+          res.status(403).json({
+            success: false,
+            error: `Project path not allowed: ${projectPath}. Must be within ALLOWED_ROOT_DIRECTORY.`,
+          });
+          return;
+        }
         // Directory doesn't exist, which is what we want
       }
 
@@ -79,35 +84,33 @@ export function createCloneHandler() {
       try {
         // Check if parentDir is a root path (Windows: C:\, D:\, etc. or Unix: /)
         const isWindowsRoot = /^[A-Za-z]:\\?$/.test(parentDir);
-        const isUnixRoot = parentDir === "/" || parentDir === "";
+        const isUnixRoot = parentDir === '/' || parentDir === '';
         const isRoot = isWindowsRoot || isUnixRoot;
 
         if (isRoot) {
           // Root paths always exist, just verify access
           logger.info(`[Templates] Using root path: ${parentDir}`);
-          await fs.access(parentDir);
+          await secureFs.access(parentDir);
         } else {
           // Check if parent directory exists
-          const parentExists = await fs
-            .access(parentDir)
-            .then(() => true)
-            .catch(() => false);
+          let parentExists = false;
+          try {
+            await secureFs.access(parentDir);
+            parentExists = true;
+          } catch {
+            parentExists = false;
+          }
 
           if (!parentExists) {
             logger.info(`[Templates] Creating parent directory: ${parentDir}`);
-            await fs.mkdir(parentDir, { recursive: true });
+            await secureFs.mkdir(parentDir, { recursive: true });
           } else {
             logger.info(`[Templates] Parent directory exists: ${parentDir}`);
           }
         }
       } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
-        logger.error(
-          "[Templates] Failed to access parent directory:",
-          parentDir,
-          error
-        );
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logger.error('[Templates] Failed to access parent directory:', parentDir, error);
         res.status(500).json({
           success: false,
           error: `Failed to access parent directory: ${errorMessage}`,
@@ -122,17 +125,17 @@ export function createCloneHandler() {
         success: boolean;
         error?: string;
       }>((resolve) => {
-        const gitProcess = spawn("git", ["clone", repoUrl, projectPath], {
+        const gitProcess = spawn('git', ['clone', repoUrl, projectPath], {
           cwd: parentDir,
         });
 
-        let stderr = "";
+        let stderr = '';
 
-        gitProcess.stderr.on("data", (data) => {
+        gitProcess.stderr.on('data', (data) => {
           stderr += data.toString();
         });
 
-        gitProcess.on("close", (code) => {
+        gitProcess.on('close', (code) => {
           if (code === 0) {
             resolve({ success: true });
           } else {
@@ -143,7 +146,7 @@ export function createCloneHandler() {
           }
         });
 
-        gitProcess.on("error", (error) => {
+        gitProcess.on('error', (error) => {
           resolve({
             success: false,
             error: `Failed to spawn git: ${error.message}`,
@@ -154,40 +157,37 @@ export function createCloneHandler() {
       if (!cloneResult.success) {
         res.status(500).json({
           success: false,
-          error: cloneResult.error || "Failed to clone repository",
+          error: cloneResult.error || 'Failed to clone repository',
         });
         return;
       }
 
       // Remove .git directory to start fresh
       try {
-        const gitDir = path.join(projectPath, ".git");
-        await fs.rm(gitDir, { recursive: true, force: true });
-        logger.info("[Templates] Removed .git directory");
+        const gitDir = path.join(projectPath, '.git');
+        await secureFs.rm(gitDir, { recursive: true, force: true });
+        logger.info('[Templates] Removed .git directory');
       } catch (error) {
-        logger.warn("[Templates] Could not remove .git directory:", error);
+        logger.warn('[Templates] Could not remove .git directory:', error);
         // Continue anyway - not critical
       }
 
       // Initialize a fresh git repository
       await new Promise<void>((resolve) => {
-        const gitInit = spawn("git", ["init"], {
+        const gitInit = spawn('git', ['init'], {
           cwd: projectPath,
         });
 
-        gitInit.on("close", () => {
-          logger.info("[Templates] Initialized fresh git repository");
+        gitInit.on('close', () => {
+          logger.info('[Templates] Initialized fresh git repository');
           resolve();
         });
 
-        gitInit.on("error", () => {
-          logger.warn("[Templates] Could not initialize git");
+        gitInit.on('error', () => {
+          logger.warn('[Templates] Could not initialize git');
           resolve();
         });
       });
-
-      // Add to allowed paths
-      addAllowedPath(projectPath);
 
       logger.info(`[Templates] Successfully cloned template to ${projectPath}`);
 
@@ -197,7 +197,7 @@ export function createCloneHandler() {
         projectName: sanitizedName,
       });
     } catch (error) {
-      logError(error, "Clone template failed");
+      logError(error, 'Clone template failed');
       res.status(500).json({ success: false, error: getErrorMessage(error) });
     }
   };

@@ -2,11 +2,10 @@
  * POST /resolve-directory endpoint - Resolve directory path from directory name
  */
 
-import type { Request, Response } from "express";
-import fs from "fs/promises";
-import path from "path";
-import { addAllowedPath } from "../../../lib/security.js";
-import { getErrorMessage, logError } from "../common.js";
+import type { Request, Response } from 'express';
+import * as secureFs from '../../../lib/secure-fs.js';
+import path from 'path';
+import { getErrorMessage, logError } from '../common.js';
 
 export function createResolveDirectoryHandler() {
   return async (req: Request, res: Response): Promise<void> => {
@@ -18,9 +17,7 @@ export function createResolveDirectoryHandler() {
       };
 
       if (!directoryName) {
-        res
-          .status(400)
-          .json({ success: false, error: "directoryName is required" });
+        res.status(400).json({ success: false, error: 'directoryName is required' });
         return;
       }
 
@@ -28,9 +25,8 @@ export function createResolveDirectoryHandler() {
       if (path.isAbsolute(directoryName) || directoryName.includes(path.sep)) {
         try {
           const resolvedPath = path.resolve(directoryName);
-          const stats = await fs.stat(resolvedPath);
+          const stats = await secureFs.stat(resolvedPath);
           if (stats.isDirectory()) {
-            addAllowedPath(resolvedPath);
             res.json({
               success: true,
               path: resolvedPath,
@@ -45,17 +41,11 @@ export function createResolveDirectoryHandler() {
       // Search for directory in common locations
       const searchPaths: string[] = [
         process.cwd(), // Current working directory
-        process.env.HOME || process.env.USERPROFILE || "", // User home
-        path.join(
-          process.env.HOME || process.env.USERPROFILE || "",
-          "Documents"
-        ),
-        path.join(process.env.HOME || process.env.USERPROFILE || "", "Desktop"),
+        process.env.HOME || process.env.USERPROFILE || '', // User home
+        path.join(process.env.HOME || process.env.USERPROFILE || '', 'Documents'),
+        path.join(process.env.HOME || process.env.USERPROFILE || '', 'Desktop'),
         // Common project locations
-        path.join(
-          process.env.HOME || process.env.USERPROFILE || "",
-          "Projects"
-        ),
+        path.join(process.env.HOME || process.env.USERPROFILE || '', 'Projects'),
       ].filter(Boolean);
 
       // Also check parent of current working directory
@@ -72,7 +62,7 @@ export function createResolveDirectoryHandler() {
       for (const searchPath of searchPaths) {
         try {
           const candidatePath = path.join(searchPath, directoryName);
-          const stats = await fs.stat(candidatePath);
+          const stats = await secureFs.stat(candidatePath);
 
           if (stats.isDirectory()) {
             // Verify it matches by checking for sample files
@@ -80,15 +70,15 @@ export function createResolveDirectoryHandler() {
               let matches = 0;
               for (const sampleFile of sampleFiles.slice(0, 5)) {
                 // Remove directory name prefix from sample file path
-                const relativeFile = sampleFile.startsWith(directoryName + "/")
+                const relativeFile = sampleFile.startsWith(directoryName + '/')
                   ? sampleFile.substring(directoryName.length + 1)
-                  : sampleFile.split("/").slice(1).join("/") ||
-                    sampleFile.split("/").pop() ||
+                  : sampleFile.split('/').slice(1).join('/') ||
+                    sampleFile.split('/').pop() ||
                     sampleFile;
 
                 try {
                   const filePath = path.join(candidatePath, relativeFile);
-                  await fs.access(filePath);
+                  await secureFs.access(filePath);
                   matches++;
                 } catch {
                   // File doesn't exist, continue checking
@@ -102,7 +92,6 @@ export function createResolveDirectoryHandler() {
             }
 
             // Found matching directory
-            addAllowedPath(candidatePath);
             res.json({
               success: true,
               path: candidatePath,
@@ -121,7 +110,7 @@ export function createResolveDirectoryHandler() {
         error: `Directory "${directoryName}" not found in common locations. Please ensure the directory exists.`,
       });
     } catch (error) {
-      logError(error, "Resolve directory failed");
+      logError(error, 'Resolve directory failed');
       res.status(500).json({ success: false, error: getErrorMessage(error) });
     }
   };

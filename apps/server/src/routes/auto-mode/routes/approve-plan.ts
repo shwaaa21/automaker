@@ -2,12 +2,12 @@
  * POST /approve-plan endpoint - Approve or reject a generated plan/spec
  */
 
-import type { Request, Response } from "express";
-import type { AutoModeService } from "../../../services/auto-mode-service.js";
-import { createLogger } from "../../../lib/logger.js";
-import { getErrorMessage, logError } from "../common.js";
+import type { Request, Response } from 'express';
+import type { AutoModeService } from '../../../services/auto-mode-service.js';
+import { createLogger } from '@automaker/utils';
+import { getErrorMessage, logError } from '../common.js';
 
-const logger = createLogger("AutoMode");
+const logger = createLogger('AutoMode');
 
 export function createApprovePlanHandler(autoModeService: AutoModeService) {
   return async (req: Request, res: Response): Promise<void> => {
@@ -23,15 +23,15 @@ export function createApprovePlanHandler(autoModeService: AutoModeService) {
       if (!featureId) {
         res.status(400).json({
           success: false,
-          error: "featureId is required",
+          error: 'featureId is required',
         });
         return;
       }
 
-      if (typeof approved !== "boolean") {
+      if (typeof approved !== 'boolean') {
         res.status(400).json({
           success: false,
-          error: "approved must be a boolean",
+          error: 'approved must be a boolean',
         });
         return;
       }
@@ -41,9 +41,9 @@ export function createApprovePlanHandler(autoModeService: AutoModeService) {
       // This supports cases where the server restarted while waiting for approval
 
       logger.info(
-        `[AutoMode] Plan ${approved ? "approved" : "rejected"} for feature ${featureId}${
-          editedPlan ? " (with edits)" : ""
-        }${feedback ? ` - Feedback: ${feedback}` : ""}`
+        `[AutoMode] Plan ${approved ? 'approved' : 'rejected'} for feature ${featureId}${
+          editedPlan ? ' (with edits)' : ''
+        }${feedback ? ` - Feedback: ${feedback}` : ''}`
       );
 
       // Resolve the pending approval (with recovery support)
@@ -67,11 +67,11 @@ export function createApprovePlanHandler(autoModeService: AutoModeService) {
         success: true,
         approved,
         message: approved
-          ? "Plan approved - implementation will continue"
-          : "Plan rejected - feature execution stopped",
+          ? 'Plan approved - implementation will continue'
+          : 'Plan rejected - feature execution stopped',
       });
     } catch (error) {
-      logError(error, "Approve plan failed");
+      logError(error, 'Approve plan failed');
       res.status(500).json({ success: false, error: getErrorMessage(error) });
     }
   };

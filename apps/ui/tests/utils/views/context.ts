@@ -1,8 +1,8 @@
-import { Page, Locator } from "@playwright/test";
-import { clickElement, fillInput } from "../core/interactions";
-import { waitForElement, waitForElementHidden } from "../core/waiting";
-import { getByTestId } from "../core/elements";
-import { expect } from "@playwright/test";
+import { Page, Locator } from '@playwright/test';
+import { clickElement, fillInput } from '../core/interactions';
+import { waitForElement, waitForElementHidden } from '../core/waiting';
+import { getByTestId } from '../core/elements';
+import { expect } from '@playwright/test';
 
 /**
  * Get the context file list element
@@ -14,10 +14,7 @@ export async function getContextFileList(page: Page): Promise<Locator> {
 /**
  * Click on a context file in the list
  */
-export async function clickContextFile(
-  page: Page,
-  fileName: string
-): Promise<void> {
+export async function clickContextFile(page: Page, fileName: string): Promise<void> {
   const fileButton = page.locator(`[data-testid="context-file-${fileName}"]`);
   await fileButton.click();
 }
@@ -33,18 +30,15 @@ export async function getContextEditor(page: Page): Promise<Locator> {
  * Get the context editor content
  */
 export async function getContextEditorContent(page: Page): Promise<string> {
-  const editor = await getByTestId(page, "context-editor");
+  const editor = await getByTestId(page, 'context-editor');
   return await editor.inputValue();
 }
 
 /**
  * Set the context editor content
  */
-export async function setContextEditorContent(
-  page: Page,
-  content: string
-): Promise<void> {
-  const editor = await getByTestId(page, "context-editor");
+export async function setContextEditorContent(page: Page, content: string): Promise<void> {
+  const editor = await getByTestId(page, 'context-editor');
   await editor.fill(content);
 }
 
@@ -52,8 +46,8 @@ export async function setContextEditorContent(
  * Open the add context file dialog
  */
 export async function openAddContextFileDialog(page: Page): Promise<void> {
-  await clickElement(page, "add-context-file");
-  await waitForElement(page, "add-context-dialog");
+  await clickElement(page, 'add-context-file');
+  await waitForElement(page, 'add-context-dialog');
 }
 
 /**
@@ -65,11 +59,11 @@ export async function createContextFile(
   content: string
 ): Promise<void> {
   await openAddContextFileDialog(page);
-  await clickElement(page, "add-text-type");
-  await fillInput(page, "new-file-name", filename);
-  await fillInput(page, "new-file-content", content);
-  await clickElement(page, "confirm-add-file");
-  await waitForElementHidden(page, "add-context-dialog");
+  await clickElement(page, 'add-text-type');
+  await fillInput(page, 'new-file-name', filename);
+  await fillInput(page, 'new-file-content', content);
+  await clickElement(page, 'confirm-add-file');
+  await waitForElementHidden(page, 'add-context-dialog');
 }
 
 /**
@@ -81,34 +75,32 @@ export async function createContextImage(
   imagePath: string
 ): Promise<void> {
   await openAddContextFileDialog(page);
-  await clickElement(page, "add-image-type");
-  await fillInput(page, "new-file-name", filename);
+  await clickElement(page, 'add-image-type');
+  await fillInput(page, 'new-file-name', filename);
   await page.setInputFiles('[data-testid="image-upload-input"]', imagePath);
-  await clickElement(page, "confirm-add-file");
-  await waitForElementHidden(page, "add-context-dialog");
+  await clickElement(page, 'confirm-add-file');
+  await waitForElementHidden(page, 'add-context-dialog');
 }
 
 /**
  * Delete a context file via the UI (must be selected first)
  */
 export async function deleteSelectedContextFile(page: Page): Promise<void> {
-  await clickElement(page, "delete-context-file");
-  await waitForElement(page, "delete-context-dialog");
-  await clickElement(page, "confirm-delete-file");
-  await waitForElementHidden(page, "delete-context-dialog");
+  await clickElement(page, 'delete-context-file');
+  await waitForElement(page, 'delete-context-dialog');
+  await clickElement(page, 'confirm-delete-file');
+  await waitForElementHidden(page, 'delete-context-dialog');
 }
 
 /**
  * Save the current context file
  */
 export async function saveContextFile(page: Page): Promise<void> {
-  await clickElement(page, "save-context-file");
+  await clickElement(page, 'save-context-file');
   // Wait for save to complete (button shows "Saved")
   await page.waitForFunction(
     () =>
-      document
-        .querySelector('[data-testid="save-context-file"]')
-        ?.textContent?.includes("Saved"),
+      document.querySelector('[data-testid="save-context-file"]')?.textContent?.includes('Saved'),
     { timeout: 5000 }
   );
 }
@@ -117,7 +109,7 @@ export async function saveContextFile(page: Page): Promise<void> {
  * Toggle markdown preview mode
  */
 export async function toggleContextPreviewMode(page: Page): Promise<void> {
-  await clickElement(page, "toggle-preview-mode");
+  await clickElement(page, 'toggle-preview-mode');
 }
 
 /**
@@ -128,8 +120,8 @@ export async function waitForContextFile(
   filename: string,
   timeout: number = 10000
 ): Promise<void> {
-  const locator = await getByTestId(page, `context-file-${filename}`);
-  await locator.waitFor({ state: "visible", timeout });
+  const locator = page.locator(`[data-testid="context-file-${filename}"]`);
+  await locator.waitFor({ state: 'visible', timeout });
 }
 
 /**
@@ -142,13 +134,13 @@ export async function selectContextFile(
   timeout: number = 10000
 ): Promise<void> {
   const fileButton = await getByTestId(page, `context-file-${filename}`);
-  await fileButton.waitFor({ state: "visible", timeout });
+  await fileButton.waitFor({ state: 'visible', timeout });
 
   // Use JavaScript click to ensure React onClick handler fires
   await fileButton.evaluate((el) => (el as HTMLButtonElement).click());
 
   // Wait for the file to be selected (toolbar with delete button becomes visible)
-  const deleteButton = await getByTestId(page, "delete-context-file");
+  const deleteButton = await getByTestId(page, 'delete-context-file');
   await expect(deleteButton).toBeVisible({
     timeout,
   });
@@ -173,11 +165,11 @@ export async function switchToEditMode(page: Page): Promise<void> {
   // First wait for content to load
   await waitForFileContentToLoad(page);
 
-  const markdownPreview = await getByTestId(page, "markdown-preview");
+  const markdownPreview = await getByTestId(page, 'markdown-preview');
   const isPreview = await markdownPreview.isVisible().catch(() => false);
 
   if (isPreview) {
-    await clickElement(page, "toggle-preview-mode");
+    await clickElement(page, 'toggle-preview-mode');
     await page.waitForSelector('[data-testid="context-editor"]', {
       timeout: 5000,
     });

@@ -2,11 +2,11 @@
  * POST /diffs endpoint - Get diffs for a worktree
  */
 
-import type { Request, Response } from "express";
-import path from "path";
-import fs from "fs/promises";
-import { getErrorMessage, logError } from "../common.js";
-import { getGitRepositoryDiffs } from "../../common.js";
+import type { Request, Response } from 'express';
+import path from 'path';
+import * as secureFs from '../../../lib/secure-fs.js';
+import { getErrorMessage, logError } from '../common.js';
+import { getGitRepositoryDiffs } from '../../common.js';
 
 export function createDiffsHandler() {
   return async (req: Request, res: Response): Promise<void> => {
@@ -17,21 +17,19 @@ export function createDiffsHandler() {
       };
 
       if (!projectPath || !featureId) {
-        res
-          .status(400)
-          .json({
-            success: false,
-            error: "projectPath and featureId required",
-          });
+        res.status(400).json({
+          success: false,
+          error: 'projectPath and featureId required',
+        });
         return;
       }
 
       // Git worktrees are stored in project directory
-      const worktreePath = path.join(projectPath, ".worktrees", featureId);
+      const worktreePath = path.join(projectPath, '.worktrees', featureId);
 
       try {
         // Check if worktree exists
-        await fs.access(worktreePath);
+        await secureFs.access(worktreePath);
 
         // Get diffs from worktree
         const result = await getGitRepositoryDiffs(worktreePath);
@@ -43,7 +41,7 @@ export function createDiffsHandler() {
         });
       } catch (innerError) {
         // Worktree doesn't exist - fallback to main project path
-        logError(innerError, "Worktree access failed, falling back to main project");
+        logError(innerError, 'Worktree access failed, falling back to main project');
 
         try {
           const result = await getGitRepositoryDiffs(projectPath);
@@ -54,12 +52,12 @@ export function createDiffsHandler() {
             hasChanges: result.hasChanges,
           });
         } catch (fallbackError) {
-          logError(fallbackError, "Fallback to main project also failed");
-          res.json({ success: true, diff: "", files: [], hasChanges: false });
+          logError(fallbackError, 'Fallback to main project also failed');
+          res.json({ success: true, diff: '', files: [], hasChanges: false });
         }
       }
     } catch (error) {
-      logError(error, "Get worktree diffs failed");
+      logError(error, 'Get worktree diffs failed');
       res.status(500).json({ success: false, error: getErrorMessage(error) });
     }
   };

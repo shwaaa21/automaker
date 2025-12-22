@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
   readWorktreeMetadata,
   writeWorktreeMetadata,
@@ -8,12 +8,12 @@ import {
   deleteWorktreeMetadata,
   type WorktreeMetadata,
   type WorktreePRInfo,
-} from "@/lib/worktree-metadata.js";
-import fs from "fs/promises";
-import path from "path";
-import os from "os";
+} from '@/lib/worktree-metadata.js';
+import fs from 'fs/promises';
+import path from 'path';
+import os from 'os';
 
-describe("worktree-metadata.ts", () => {
+describe('worktree-metadata.ts', () => {
   let testProjectPath: string;
 
   beforeEach(async () => {
@@ -29,10 +29,10 @@ describe("worktree-metadata.ts", () => {
     }
   });
 
-  describe("sanitizeBranchName", () => {
+  describe('sanitizeBranchName', () => {
     // Test through readWorktreeMetadata and writeWorktreeMetadata
-    it("should sanitize branch names with invalid characters", async () => {
-      const branch = "feature/test-branch";
+    it('should sanitize branch names with invalid characters', async () => {
+      const branch = 'feature/test-branch';
       const metadata: WorktreeMetadata = {
         branch,
         createdAt: new Date().toISOString(),
@@ -43,8 +43,8 @@ describe("worktree-metadata.ts", () => {
       expect(result).toEqual(metadata);
     });
 
-    it("should sanitize branch names with Windows invalid characters", async () => {
-      const branch = "feature:test*branch?";
+    it('should sanitize branch names with Windows invalid characters', async () => {
+      const branch = 'feature:test*branch?';
       const metadata: WorktreeMetadata = {
         branch,
         createdAt: new Date().toISOString(),
@@ -55,10 +55,36 @@ describe("worktree-metadata.ts", () => {
       expect(result).toEqual(metadata);
     });
 
-    it("should sanitize Windows reserved names", async () => {
-      const branch = "CON";
+    it('should sanitize Windows reserved names', async () => {
+      const branch = 'CON';
       const metadata: WorktreeMetadata = {
         branch,
+        createdAt: new Date().toISOString(),
+      };
+
+      await writeWorktreeMetadata(testProjectPath, branch, metadata);
+      const result = await readWorktreeMetadata(testProjectPath, branch);
+      expect(result).toEqual(metadata);
+    });
+
+    it('should handle empty branch name', async () => {
+      const branch = '';
+      const metadata: WorktreeMetadata = {
+        branch: 'branch',
+        createdAt: new Date().toISOString(),
+      };
+
+      // Empty branch name should be sanitized to "_branch"
+      await writeWorktreeMetadata(testProjectPath, branch, metadata);
+      const result = await readWorktreeMetadata(testProjectPath, branch);
+      expect(result).toEqual(metadata);
+    });
+
+    it('should handle branch name that becomes empty after sanitization', async () => {
+      // Test branch that would become empty after removing invalid chars
+      const branch = '///';
+      const metadata: WorktreeMetadata = {
+        branch: 'branch',
         createdAt: new Date().toISOString(),
       };
 
@@ -68,14 +94,14 @@ describe("worktree-metadata.ts", () => {
     });
   });
 
-  describe("readWorktreeMetadata", () => {
+  describe('readWorktreeMetadata', () => {
     it("should return null when metadata file doesn't exist", async () => {
-      const result = await readWorktreeMetadata(testProjectPath, "nonexistent-branch");
+      const result = await readWorktreeMetadata(testProjectPath, 'nonexistent-branch');
       expect(result).toBeNull();
     });
 
-    it("should read existing metadata", async () => {
-      const branch = "test-branch";
+    it('should read existing metadata', async () => {
+      const branch = 'test-branch';
       const metadata: WorktreeMetadata = {
         branch,
         createdAt: new Date().toISOString(),
@@ -86,16 +112,16 @@ describe("worktree-metadata.ts", () => {
       expect(result).toEqual(metadata);
     });
 
-    it("should read metadata with PR info", async () => {
-      const branch = "pr-branch";
+    it('should read metadata with PR info', async () => {
+      const branch = 'pr-branch';
       const metadata: WorktreeMetadata = {
         branch,
         createdAt: new Date().toISOString(),
         pr: {
           number: 123,
-          url: "https://github.com/owner/repo/pull/123",
-          title: "Test PR",
-          state: "open",
+          url: 'https://github.com/owner/repo/pull/123',
+          title: 'Test PR',
+          state: 'open',
           createdAt: new Date().toISOString(),
         },
       };
@@ -106,9 +132,9 @@ describe("worktree-metadata.ts", () => {
     });
   });
 
-  describe("writeWorktreeMetadata", () => {
+  describe('writeWorktreeMetadata', () => {
     it("should create metadata directory if it doesn't exist", async () => {
-      const branch = "new-branch";
+      const branch = 'new-branch';
       const metadata: WorktreeMetadata = {
         branch,
         createdAt: new Date().toISOString(),
@@ -119,8 +145,8 @@ describe("worktree-metadata.ts", () => {
       expect(result).toEqual(metadata);
     });
 
-    it("should overwrite existing metadata", async () => {
-      const branch = "existing-branch";
+    it('should overwrite existing metadata', async () => {
+      const branch = 'existing-branch';
       const metadata1: WorktreeMetadata = {
         branch,
         createdAt: new Date().toISOString(),
@@ -130,9 +156,9 @@ describe("worktree-metadata.ts", () => {
         createdAt: new Date().toISOString(),
         pr: {
           number: 456,
-          url: "https://github.com/owner/repo/pull/456",
-          title: "Updated PR",
-          state: "closed",
+          url: 'https://github.com/owner/repo/pull/456',
+          title: 'Updated PR',
+          state: 'closed',
           createdAt: new Date().toISOString(),
         },
       };
@@ -144,14 +170,14 @@ describe("worktree-metadata.ts", () => {
     });
   });
 
-  describe("updateWorktreePRInfo", () => {
+  describe('updateWorktreePRInfo', () => {
     it("should create new metadata if it doesn't exist", async () => {
-      const branch = "new-pr-branch";
+      const branch = 'new-pr-branch';
       const prInfo: WorktreePRInfo = {
         number: 789,
-        url: "https://github.com/owner/repo/pull/789",
-        title: "New PR",
-        state: "open",
+        url: 'https://github.com/owner/repo/pull/789',
+        title: 'New PR',
+        state: 'open',
         createdAt: new Date().toISOString(),
       };
 
@@ -162,8 +188,8 @@ describe("worktree-metadata.ts", () => {
       expect(result?.pr).toEqual(prInfo);
     });
 
-    it("should update existing metadata with PR info", async () => {
-      const branch = "existing-pr-branch";
+    it('should update existing metadata with PR info', async () => {
+      const branch = 'existing-pr-branch';
       const metadata: WorktreeMetadata = {
         branch,
         createdAt: new Date().toISOString(),
@@ -173,9 +199,9 @@ describe("worktree-metadata.ts", () => {
 
       const prInfo: WorktreePRInfo = {
         number: 999,
-        url: "https://github.com/owner/repo/pull/999",
-        title: "Updated PR",
-        state: "merged",
+        url: 'https://github.com/owner/repo/pull/999',
+        title: 'Updated PR',
+        state: 'merged',
         createdAt: new Date().toISOString(),
       };
 
@@ -184,8 +210,8 @@ describe("worktree-metadata.ts", () => {
       expect(result?.pr).toEqual(prInfo);
     });
 
-    it("should preserve existing metadata when updating PR info", async () => {
-      const branch = "preserve-branch";
+    it('should preserve existing metadata when updating PR info', async () => {
+      const branch = 'preserve-branch';
       const originalCreatedAt = new Date().toISOString();
       const metadata: WorktreeMetadata = {
         branch,
@@ -196,9 +222,9 @@ describe("worktree-metadata.ts", () => {
 
       const prInfo: WorktreePRInfo = {
         number: 111,
-        url: "https://github.com/owner/repo/pull/111",
-        title: "PR",
-        state: "open",
+        url: 'https://github.com/owner/repo/pull/111',
+        title: 'PR',
+        state: 'open',
         createdAt: new Date().toISOString(),
       };
 
@@ -209,14 +235,14 @@ describe("worktree-metadata.ts", () => {
     });
   });
 
-  describe("getWorktreePRInfo", () => {
+  describe('getWorktreePRInfo', () => {
     it("should return null when metadata doesn't exist", async () => {
-      const result = await getWorktreePRInfo(testProjectPath, "nonexistent");
+      const result = await getWorktreePRInfo(testProjectPath, 'nonexistent');
       expect(result).toBeNull();
     });
 
-    it("should return null when metadata exists but has no PR info", async () => {
-      const branch = "no-pr-branch";
+    it('should return null when metadata exists but has no PR info', async () => {
+      const branch = 'no-pr-branch';
       const metadata: WorktreeMetadata = {
         branch,
         createdAt: new Date().toISOString(),
@@ -227,13 +253,13 @@ describe("worktree-metadata.ts", () => {
       expect(result).toBeNull();
     });
 
-    it("should return PR info when it exists", async () => {
-      const branch = "has-pr-branch";
+    it('should return PR info when it exists', async () => {
+      const branch = 'has-pr-branch';
       const prInfo: WorktreePRInfo = {
         number: 222,
-        url: "https://github.com/owner/repo/pull/222",
-        title: "Has PR",
-        state: "open",
+        url: 'https://github.com/owner/repo/pull/222',
+        title: 'Has PR',
+        state: 'open',
         createdAt: new Date().toISOString(),
       };
 
@@ -243,23 +269,23 @@ describe("worktree-metadata.ts", () => {
     });
   });
 
-  describe("readAllWorktreeMetadata", () => {
+  describe('readAllWorktreeMetadata', () => {
     it("should return empty map when worktrees directory doesn't exist", async () => {
       const result = await readAllWorktreeMetadata(testProjectPath);
       expect(result.size).toBe(0);
     });
 
-    it("should return empty map when worktrees directory is empty", async () => {
-      const worktreesDir = path.join(testProjectPath, ".automaker", "worktrees");
+    it('should return empty map when worktrees directory is empty', async () => {
+      const worktreesDir = path.join(testProjectPath, '.automaker', 'worktrees');
       await fs.mkdir(worktreesDir, { recursive: true });
 
       const result = await readAllWorktreeMetadata(testProjectPath);
       expect(result.size).toBe(0);
     });
 
-    it("should read all worktree metadata", async () => {
-      const branch1 = "branch-1";
-      const branch2 = "branch-2";
+    it('should read all worktree metadata', async () => {
+      const branch1 = 'branch-1';
+      const branch2 = 'branch-2';
       const metadata1: WorktreeMetadata = {
         branch: branch1,
         createdAt: new Date().toISOString(),
@@ -269,9 +295,9 @@ describe("worktree-metadata.ts", () => {
         createdAt: new Date().toISOString(),
         pr: {
           number: 333,
-          url: "https://github.com/owner/repo/pull/333",
-          title: "PR 3",
-          state: "open",
+          url: 'https://github.com/owner/repo/pull/333',
+          title: 'PR 3',
+          state: 'open',
           createdAt: new Date().toISOString(),
         },
       };
@@ -285,12 +311,12 @@ describe("worktree-metadata.ts", () => {
       expect(result.get(branch2)).toEqual(metadata2);
     });
 
-    it("should skip directories without worktree.json", async () => {
-      const worktreesDir = path.join(testProjectPath, ".automaker", "worktrees");
-      const emptyDir = path.join(worktreesDir, "empty-dir");
+    it('should skip directories without worktree.json', async () => {
+      const worktreesDir = path.join(testProjectPath, '.automaker', 'worktrees');
+      const emptyDir = path.join(worktreesDir, 'empty-dir');
       await fs.mkdir(emptyDir, { recursive: true });
 
-      const branch = "valid-branch";
+      const branch = 'valid-branch';
       const metadata: WorktreeMetadata = {
         branch,
         createdAt: new Date().toISOString(),
@@ -302,13 +328,13 @@ describe("worktree-metadata.ts", () => {
       expect(result.get(branch)).toEqual(metadata);
     });
 
-    it("should skip files in worktrees directory", async () => {
-      const worktreesDir = path.join(testProjectPath, ".automaker", "worktrees");
+    it('should skip files in worktrees directory', async () => {
+      const worktreesDir = path.join(testProjectPath, '.automaker', 'worktrees');
       await fs.mkdir(worktreesDir, { recursive: true });
-      const filePath = path.join(worktreesDir, "not-a-dir.txt");
-      await fs.writeFile(filePath, "content");
+      const filePath = path.join(worktreesDir, 'not-a-dir.txt');
+      await fs.writeFile(filePath, 'content');
 
-      const branch = "valid-branch";
+      const branch = 'valid-branch';
       const metadata: WorktreeMetadata = {
         branch,
         createdAt: new Date().toISOString(),
@@ -320,14 +346,14 @@ describe("worktree-metadata.ts", () => {
       expect(result.get(branch)).toEqual(metadata);
     });
 
-    it("should skip directories with malformed JSON", async () => {
-      const worktreesDir = path.join(testProjectPath, ".automaker", "worktrees");
-      const badDir = path.join(worktreesDir, "bad-dir");
+    it('should skip directories with malformed JSON', async () => {
+      const worktreesDir = path.join(testProjectPath, '.automaker', 'worktrees');
+      const badDir = path.join(worktreesDir, 'bad-dir');
       await fs.mkdir(badDir, { recursive: true });
-      const badJsonPath = path.join(badDir, "worktree.json");
-      await fs.writeFile(badJsonPath, "not valid json");
+      const badJsonPath = path.join(badDir, 'worktree.json');
+      await fs.writeFile(badJsonPath, 'not valid json');
 
-      const branch = "valid-branch";
+      const branch = 'valid-branch';
       const metadata: WorktreeMetadata = {
         branch,
         createdAt: new Date().toISOString(),
@@ -340,9 +366,9 @@ describe("worktree-metadata.ts", () => {
     });
   });
 
-  describe("deleteWorktreeMetadata", () => {
-    it("should delete worktree metadata directory", async () => {
-      const branch = "to-delete";
+  describe('deleteWorktreeMetadata', () => {
+    it('should delete worktree metadata directory', async () => {
+      const branch = 'to-delete';
       const metadata: WorktreeMetadata = {
         branch,
         createdAt: new Date().toISOString(),
@@ -359,10 +385,7 @@ describe("worktree-metadata.ts", () => {
 
     it("should handle deletion when metadata doesn't exist", async () => {
       // Should not throw
-      await expect(
-        deleteWorktreeMetadata(testProjectPath, "nonexistent")
-      ).resolves.toBeUndefined();
+      await expect(deleteWorktreeMetadata(testProjectPath, 'nonexistent')).resolves.toBeUndefined();
     });
   });
 });
-

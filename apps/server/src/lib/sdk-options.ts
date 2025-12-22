@@ -9,48 +9,59 @@
  * - Chat: Full tool access for interactive coding
  *
  * Uses model-resolver for consistent model handling across the application.
+ *
+ * SECURITY: All factory functions validate the working directory (cwd) against
+ * ALLOWED_ROOT_DIRECTORY before returning options. This provides a centralized
+ * security check that applies to ALL AI model invocations, regardless of provider.
  */
 
-import type { Options } from "@anthropic-ai/claude-agent-sdk";
-import {
-  resolveModelString,
-  DEFAULT_MODELS,
-  CLAUDE_MODEL_MAP,
-} from "./model-resolver.js";
+import type { Options } from '@anthropic-ai/claude-agent-sdk';
+import path from 'path';
+import { resolveModelString } from '@automaker/model-resolver';
+import { DEFAULT_MODELS, CLAUDE_MODEL_MAP } from '@automaker/types';
+import { isPathAllowed, PathNotAllowedError, getAllowedRootDirectory } from '@automaker/platform';
+
+/**
+ * Validate that a working directory is allowed by ALLOWED_ROOT_DIRECTORY.
+ * This is the centralized security check for ALL AI model invocations.
+ *
+ * @param cwd - The working directory to validate
+ * @throws PathNotAllowedError if the directory is not within ALLOWED_ROOT_DIRECTORY
+ *
+ * This function is called by all create*Options() factory functions to ensure
+ * that AI models can only operate within allowed directories. This applies to:
+ * - All current models (Claude, future models)
+ * - All invocation types (chat, auto-mode, spec generation, etc.)
+ */
+export function validateWorkingDirectory(cwd: string): void {
+  const resolvedCwd = path.resolve(cwd);
+
+  if (!isPathAllowed(resolvedCwd)) {
+    const allowedRoot = getAllowedRootDirectory();
+    throw new PathNotAllowedError(
+      `Working directory "${cwd}" (resolved: ${resolvedCwd}) is not allowed. ` +
+        (allowedRoot
+          ? `Must be within ALLOWED_ROOT_DIRECTORY: ${allowedRoot}`
+          : 'ALLOWED_ROOT_DIRECTORY is configured but path is not within allowed directories.')
+    );
+  }
+}
 
 /**
  * Tool presets for different use cases
  */
 export const TOOL_PRESETS = {
   /** Read-only tools for analysis */
-  readOnly: ["Read", "Glob", "Grep"] as const,
+  readOnly: ['Read', 'Glob', 'Grep'] as const,
 
   /** Tools for spec generation that needs to read the codebase */
-  specGeneration: ["Read", "Glob", "Grep"] as const,
+  specGeneration: ['Read', 'Glob', 'Grep'] as const,
 
   /** Full tool access for feature implementation */
-  fullAccess: [
-    "Read",
-    "Write",
-    "Edit",
-    "Glob",
-    "Grep",
-    "Bash",
-    "WebSearch",
-    "WebFetch",
-  ] as const,
+  fullAccess: ['Read', 'Write', 'Edit', 'Glob', 'Grep', 'Bash', 'WebSearch', 'WebFetch'] as const,
 
   /** Tools for chat/interactive mode */
-  chat: [
-    "Read",
-    "Write",
-    "Edit",
-    "Glob",
-    "Grep",
-    "Bash",
-    "WebSearch",
-    "WebFetch",
-  ] as const,
+  chat: ['Read', 'Write', 'Edit', 'Glob', 'Grep', 'Bash', 'WebSearch', 'WebFetch'] as const,
 } as const;
 
 /**
@@ -81,7 +92,7 @@ export const MAX_TURNS = {
  * - AUTOMAKER_MODEL_DEFAULT: Fallback model for all operations
  */
 export function getModelForUseCase(
-  useCase: "spec" | "features" | "suggestions" | "chat" | "auto" | "default",
+  useCase: 'spec' | 'features' | 'suggestions' | 'chat' | 'auto' | 'default',
   explicitModel?: string
 ): string {
   // Explicit model takes precedence
@@ -105,12 +116,12 @@ export function getModelForUseCase(
   }
 
   const defaultModels: Record<string, string> = {
-    spec: CLAUDE_MODEL_MAP["haiku"], // used to generate app specs
-    features: CLAUDE_MODEL_MAP["haiku"], // used to generate features from app specs
-    suggestions: CLAUDE_MODEL_MAP["haiku"], // used for suggestions
-    chat: CLAUDE_MODEL_MAP["haiku"], // used for chat
-    auto: CLAUDE_MODEL_MAP["opus"], // used to implement kanban cards
-    default: CLAUDE_MODEL_MAP["opus"],
+    spec: CLAUDE_MODEL_MAP['haiku'], // used to generate app specs
+    features: CLAUDE_MODEL_MAP['haiku'], // used to generate features from app specs
+    suggestions: CLAUDE_MODEL_MAP['haiku'], // used for suggestions
+    chat: CLAUDE_MODEL_MAP['haiku'], // used for chat
+    auto: CLAUDE_MODEL_MAP['opus'], // used to implement kanban cards
+    default: CLAUDE_MODEL_MAP['opus'],
   };
 
   return resolveModelString(defaultModels[useCase] || DEFAULT_MODELS.claude);
@@ -121,7 +132,7 @@ export function getModelForUseCase(
  */
 function getBaseOptions(): Partial<Options> {
   return {
-    permissionMode: "acceptEdits",
+    permissionMode: 'acceptEdits',
   };
 }
 
@@ -146,7 +157,7 @@ export interface CreateSdkOptionsConfig {
 
   /** Optional output format for structured outputs */
   outputFormat?: {
-    type: "json_schema";
+    type: 'json_schema';
     schema: Record<string, unknown>;
   };
 }
@@ -159,16 +170,17 @@ export interface CreateSdkOptionsConfig {
  * - Extended turns for thorough exploration
  * - Opus model by default (can be overridden)
  */
-export function createSpecGenerationOptions(
-  config: CreateSdkOptionsConfig
-): Options {
+export function createSpecGenerationOptions(config: CreateSdkOptionsConfig): Options {
+  // Validate working directory before creating options
+  validateWorkingDirectory(config.cwd);
+
   return {
     ...getBaseOptions(),
     // Override permissionMode - spec generation only needs read-only tools
     // Using "acceptEdits" can cause Claude to write files to unexpected locations
     // See: https://github.com/AutoMaker-Org/automaker/issues/149
-    permissionMode: "default",
-    model: getModelForUseCase("spec", config.model),
+    permissionMode: 'default',
+    model: getModelForUseCase('spec', config.model),
     maxTurns: MAX_TURNS.maximum,
     cwd: config.cwd,
     allowedTools: [...TOOL_PRESETS.specGeneration],
@@ -186,14 +198,15 @@ export function createSpecGenerationOptions(
  * - Quick turns since it's mostly JSON generation
  * - Sonnet model by default for speed
  */
-export function createFeatureGenerationOptions(
-  config: CreateSdkOptionsConfig
-): Options {
+export function createFeatureGenerationOptions(config: CreateSdkOptionsConfig): Options {
+  // Validate working directory before creating options
+  validateWorkingDirectory(config.cwd);
+
   return {
     ...getBaseOptions(),
     // Override permissionMode - feature generation only needs read-only tools
-    permissionMode: "default",
-    model: getModelForUseCase("features", config.model),
+    permissionMode: 'default',
+    model: getModelForUseCase('features', config.model),
     maxTurns: MAX_TURNS.quick,
     cwd: config.cwd,
     allowedTools: [...TOOL_PRESETS.readOnly],
@@ -210,12 +223,13 @@ export function createFeatureGenerationOptions(
  * - Standard turns to allow thorough codebase exploration and structured output generation
  * - Opus model by default for thorough analysis
  */
-export function createSuggestionsOptions(
-  config: CreateSdkOptionsConfig
-): Options {
+export function createSuggestionsOptions(config: CreateSdkOptionsConfig): Options {
+  // Validate working directory before creating options
+  validateWorkingDirectory(config.cwd);
+
   return {
     ...getBaseOptions(),
-    model: getModelForUseCase("suggestions", config.model),
+    model: getModelForUseCase('suggestions', config.model),
     maxTurns: MAX_TURNS.extended,
     cwd: config.cwd,
     allowedTools: [...TOOL_PRESETS.readOnly],
@@ -235,12 +249,15 @@ export function createSuggestionsOptions(
  * - Sandbox enabled for bash safety
  */
 export function createChatOptions(config: CreateSdkOptionsConfig): Options {
+  // Validate working directory before creating options
+  validateWorkingDirectory(config.cwd);
+
   // Model priority: explicit model > session model > chat default
   const effectiveModel = config.model || config.sessionModel;
 
   return {
     ...getBaseOptions(),
-    model: getModelForUseCase("chat", effectiveModel),
+    model: getModelForUseCase('chat', effectiveModel),
     maxTurns: MAX_TURNS.standard,
     cwd: config.cwd,
     allowedTools: [...TOOL_PRESETS.chat],
@@ -263,9 +280,12 @@ export function createChatOptions(config: CreateSdkOptionsConfig): Options {
  * - Sandbox enabled for bash safety
  */
 export function createAutoModeOptions(config: CreateSdkOptionsConfig): Options {
+  // Validate working directory before creating options
+  validateWorkingDirectory(config.cwd);
+
   return {
     ...getBaseOptions(),
-    model: getModelForUseCase("auto", config.model),
+    model: getModelForUseCase('auto', config.model),
     maxTurns: MAX_TURNS.maximum,
     cwd: config.cwd,
     allowedTools: [...TOOL_PRESETS.fullAccess],
@@ -290,14 +310,15 @@ export function createCustomOptions(
     sandbox?: { enabled: boolean; autoAllowBashIfSandboxed?: boolean };
   }
 ): Options {
+  // Validate working directory before creating options
+  validateWorkingDirectory(config.cwd);
+
   return {
     ...getBaseOptions(),
-    model: getModelForUseCase("default", config.model),
+    model: getModelForUseCase('default', config.model),
     maxTurns: config.maxTurns ?? MAX_TURNS.maximum,
     cwd: config.cwd,
-    allowedTools: config.allowedTools
-      ? [...config.allowedTools]
-      : [...TOOL_PRESETS.readOnly],
+    allowedTools: config.allowedTools ? [...config.allowedTools] : [...TOOL_PRESETS.readOnly],
     ...(config.sandbox && { sandbox: config.sandbox }),
     ...(config.systemPrompt && { systemPrompt: config.systemPrompt }),
     ...(config.abortController && { abortController: config.abortController }),

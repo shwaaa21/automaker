@@ -1,8 +1,8 @@
-import { useMemo, useCallback } from "react";
-import { Feature, useAppStore } from "@/store/app-store";
-import { resolveDependencies, getBlockingDependencies } from "@/lib/dependency-resolver";
+import { useMemo, useCallback } from 'react';
+import { Feature, useAppStore } from '@/store/app-store';
+import { resolveDependencies, getBlockingDependencies } from '@automaker/dependency-resolver';
 
-type ColumnId = Feature["status"];
+type ColumnId = Feature['status'];
 
 interface UseBoardColumnFeaturesProps {
   features: Feature[];
@@ -87,7 +87,7 @@ export function useBoardColumnFeatures({
 
         // Filter all items by worktree, including backlog
         // This ensures backlog items with a branch assigned only show in that branch
-        if (status === "backlog") {
+        if (status === 'backlog') {
           if (matchesWorktree) {
             map.backlog.push(f);
           }
@@ -136,7 +136,14 @@ export function useBoardColumnFeatures({
     }
 
     return map;
-  }, [features, runningAutoTasks, searchQuery, currentWorktreePath, currentWorktreeBranch, projectPath]);
+  }, [
+    features,
+    runningAutoTasks,
+    searchQuery,
+    currentWorktreePath,
+    currentWorktreeBranch,
+    projectPath,
+  ]);
 
   const getColumnFeatures = useCallback(
     (columnId: ColumnId) => {
@@ -147,7 +154,7 @@ export function useBoardColumnFeatures({
 
   // Memoize completed features for the archive modal
   const completedFeatures = useMemo(() => {
-    return features.filter((f) => f.status === "completed");
+    return features.filter((f) => f.status === 'completed');
   }, [features]);
 
   return {
