@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Message, StreamEvent } from '@/types/electron';
 import { useMessageQueue } from './use-message-queue';
-import type { ImageAttachment } from '@/store/app-store';
+import type { ImageAttachment, TextFileAttachment } from '@/store/app-store';
 import { getElectronAPI } from '@/lib/electron';
+import { sanitizeFilename } from '@/lib/image-utils';
 
 interface UseElectronAgentOptions {
   sessionId: string;
@@ -15,12 +16,22 @@ interface UseElectronAgentResult {
   messages: Message[];
   isProcessing: boolean;
   isConnected: boolean;
-  sendMessage: (content: string, images?: ImageAttachment[]) => Promise<void>;
+  sendMessage: (
+    content: string,
+    images?: ImageAttachment[],
+    textFiles?: TextFileAttachment[]
+  ) => Promise<void>;
   stopExecution: () => Promise<void>;
   clearHistory: () => Promise<void>;
   error: string | null;
   // Queue-related state
-  queuedMessages: { id: string; content: string; images?: ImageAttachment[]; timestamp: Date }[];
+  queuedMessages: {
+    id: string;
+    content: string;
+    images?: ImageAttachment[];
+    textFiles?: TextFileAttachment[];
+    timestamp: Date;
+  }[];
   isQueueProcessing: boolean;
   clearMessageQueue: () => void;
 }
@@ -46,7 +57,7 @@ export function useElectronAgent({
 
   // Send message directly to the agent (bypassing queue)
   const sendMessageDirectly = useCallback(
-    async (content: string, images?: ImageAttachment[]) => {
+    async (content: string, images?: ImageAttachment[], textFiles?: TextFileAttachment[]) => {
       const api = getElectronAPI();
       if (!api?.agent) {
         setError('API not available');
@@ -64,7 +75,19 @@ export function useElectronAgent({
         console.log('[useElectronAgent] Sending message directly', {
           hasImages: images && images.length > 0,
           imageCount: images?.length || 0,
+          hasTextFiles: textFiles && textFiles.length > 0,
+          textFileCount: textFiles?.length || 0,
         });
+
+        // Build message content with text file context prepended
+        let messageContent = content;
+        if (textFiles && textFiles.length > 0) {
+          const contextParts = textFiles.map((file) => {
+            return `<file name="${file.filename}">\n${file.content}\n</file>`;
+          });
+          const contextBlock = `Here are some files for context:\n\n${contextParts.join('\n\n')}\n\n`;
+          messageContent = contextBlock + content;
+        }
 
         // Save images to .automaker/images and get paths
         let imagePaths: string[] | undefined;
@@ -73,7 +96,7 @@ export function useElectronAgent({
           for (const image of images) {
             const result = await api.saveImageToTemp(
               image.data,
-              image.filename,
+              sanitizeFilename(image.filename),
               image.mimeType,
               workingDirectory // Pass workingDirectory as projectPath
             );
@@ -88,7 +111,7 @@ export function useElectronAgent({
 
         const result = await api.agent!.send(
           sessionId,
-          content,
+          messageContent,
           workingDirectory,
           imagePaths,
           model
@@ -114,7 +137,11 @@ export function useElectronAgent({
   const { queuedMessages, isProcessingQueue, addToQueue, clearQueue, processNext } =
     useMessageQueue({
       onProcessNext: async (queuedMessage) => {
-        await sendMessageDirectly(queuedMessage.content, queuedMessage.images);
+        await sendMessageDirectly(
+          queuedMessage.content,
+          queuedMessage.images,
+          queuedMessage.textFiles
+        );
       },
     });
 
@@ -288,7 +315,7 @@ export function useElectronAgent({
 
   // Send a message to the agent
   const sendMessage = useCallback(
-    async (content: string, images?: ImageAttachment[]) => {
+    async (content: string, images?: ImageAttachment[], textFiles?: TextFileAttachment[]) => {
       const api = getElectronAPI();
       if (!api?.agent) {
         setError('API not available');
@@ -307,7 +334,19 @@ export function useElectronAgent({
         console.log('[useElectronAgent] Sending message', {
           hasImages: images && images.length > 0,
           imageCount: images?.length || 0,
+          hasTextFiles: textFiles && textFiles.length > 0,
+          textFileCount: textFiles?.length || 0,
         });
+
+        // Build message content with text file context prepended
+        let messageContent = content;
+        if (textFiles && textFiles.length > 0) {
+          const contextParts = textFiles.map((file) => {
+            return `<file name="${file.filename}">\n${file.content}\n</file>`;
+          });
+          const contextBlock = `Here are some files for context:\n\n${contextParts.join('\n\n')}\n\n`;
+          messageContent = contextBlock + content;
+        }
 
         // Save images to .automaker/images and get paths
         let imagePaths: string[] | undefined;
@@ -316,7 +355,7 @@ export function useElectronAgent({
           for (const image of images) {
             const result = await api.saveImageToTemp(
               image.data,
-              image.filename,
+              sanitizeFilename(image.filename),
               image.mimeType,
               workingDirectory // Pass workingDirectory as projectPath
             );
@@ -331,7 +370,7 @@ export function useElectronAgent({
 
         const result = await api.agent!.send(
           sessionId,
-          content,
+          messageContent,
           workingDirectory,
           imagePaths,
           model

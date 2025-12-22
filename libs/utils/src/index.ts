@@ -44,3 +44,13 @@ export { mkdirSafe, existsSafe } from './fs-utils.js';
 
 // Path utilities
 export { normalizePath, pathsEqual } from './path-utils.js';
+
+// Context file loading
+export {
+  loadContextFiles,
+  getContextFilesSummary,
+  type ContextMetadata,
+  type ContextFileInfo,
+  type ContextFilesResult,
+  type LoadContextFilesOptions,
+} from './context-loader.js';

@@ -536,6 +536,18 @@ export interface ElectronAPI {
   claude?: {
     getUsage: () => Promise<ClaudeUsageResponse>;
   };
+  context?: {
+    describeImage: (imagePath: string) => Promise<{
+      success: boolean;
+      description?: string;
+      error?: string;
+    }>;
+    describeFile: (filePath: string) => Promise<{
+      success: boolean;
+      description?: string;
+      error?: string;
+    }>;
+  };
 }
 
 // Note: Window interface is declared in @/types/electron.d.ts

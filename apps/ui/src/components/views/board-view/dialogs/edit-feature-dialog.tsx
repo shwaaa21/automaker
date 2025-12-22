@@ -16,6 +16,7 @@ import { CategoryAutocomplete } from '@/components/ui/category-autocomplete';
 import {
   DescriptionImageDropZone,
   FeatureImagePath as DescriptionImagePath,
+  FeatureTextFilePath as DescriptionTextFilePath,
   ImagePreviewMap,
 } from '@/components/ui/description-image-dropzone';
 import {
@@ -67,6 +68,7 @@ interface EditFeatureDialogProps {
       model: AgentModel;
       thinkingLevel: ThinkingLevel;
       imagePaths: DescriptionImagePath[];
+      textFilePaths: DescriptionTextFilePath[];
       branchName: string; // Can be empty string to use current branch
       priority: number;
       planningMode: PlanningMode;
@@ -166,6 +168,7 @@ export function EditFeatureDialog({
       model: selectedModel,
       thinkingLevel: normalizedThinking,
       imagePaths: editingFeature.imagePaths ?? [],
+      textFilePaths: editingFeature.textFilePaths ?? [],
       branchName: finalBranchName,
       priority: editingFeature.priority ?? 2,
       planningMode,
@@ -290,6 +293,13 @@ export function EditFeatureDialog({
                   setEditingFeature({
                     ...editingFeature,
                     imagePaths: images,
+                  })
+                }
+                textFiles={editingFeature.textFilePaths ?? []}
+                onTextFilesChange={(textFiles) =>
+                  setEditingFeature({
+                    ...editingFeature,
+                    textFilePaths: textFiles,
                   })
                 }
                 placeholder="Describe the feature..."

@@ -16,9 +16,12 @@ import { useAppStore, defaultBackgroundSettings } from '@/store/app-store';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { useBoardBackgroundSettings } from '@/hooks/use-board-background-settings';
 import { toast } from 'sonner';
-
-const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-const DEFAULT_MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+import {
+  fileToBase64,
+  validateImageFile,
+  ACCEPTED_IMAGE_TYPES,
+  DEFAULT_MAX_FILE_SIZE,
+} from '@/lib/image-utils';
 
 interface BoardBackgroundModalProps {
   open: boolean;
@@ -71,21 +74,6 @@ export function BoardBackgroundModal({ open, onOpenChange }: BoardBackgroundModa
     }
   }, [currentProject, backgroundSettings.imagePath, imageVersion]);
 
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (typeof reader.result === 'string') {
-          resolve(reader.result);
-        } else {
-          reject(new Error('Failed to read file as base64'));
-        }
-      };
-      reader.onerror = () => reject(new Error('Failed to read file'));
-      reader.readAsDataURL(file);
-    });
-  };
-
   const processFile = useCallback(
     async (file: File) => {
       if (!currentProject) {
@@ -93,16 +81,10 @@ export function BoardBackgroundModal({ open, onOpenChange }: BoardBackgroundModa
         return;
       }
 
-      // Validate file type
-      if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
-        toast.error('Unsupported file type. Please use JPG, PNG, GIF, or WebP.');
-        return;
-      }
-
-      // Validate file size
-      if (file.size > DEFAULT_MAX_FILE_SIZE) {
-        const maxSizeMB = DEFAULT_MAX_FILE_SIZE / (1024 * 1024);
-        toast.error(`File too large. Maximum size is ${maxSizeMB}MB.`);
+      // Validate file
+      const validation = validateImageFile(file, DEFAULT_MAX_FILE_SIZE);
+      if (!validation.isValid) {
+        toast.error(validation.error);
         return;
       }
 

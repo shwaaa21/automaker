@@ -1,6 +1,16 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Project, TrashedProject } from '@/lib/electron';
+import type {
+  Feature as BaseFeature,
+  FeatureImagePath,
+  AgentModel,
+  PlanningMode,
+  AIProfile,
+} from '@automaker/types';
+
+// Re-export ThemeMode for convenience
+export type { ThemeMode };
 
 export type ViewMode =
   | 'welcome'
@@ -202,12 +212,21 @@ export interface ImageAttachment {
   size?: number; // file size in bytes - optional for messages from server
 }
 
+export interface TextFileAttachment {
+  id: string;
+  content: string; // text content of the file
+  mimeType: string; // e.g., "text/plain", "text/markdown"
+  filename: string;
+  size: number; // file size in bytes
+}
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
   images?: ImageAttachment[];
+  textFiles?: TextFileAttachment[];
 }
 
 export interface ChatSession {
@@ -220,6 +239,7 @@ export interface ChatSession {
   archived: boolean;
 }
 
+// UI-specific: base64-encoded images (not in shared types)
 export interface FeatureImage {
   id: string;
   data: string; // base64 encoded
@@ -228,62 +248,25 @@ export interface FeatureImage {
   size: number;
 }
 
-export interface FeatureImagePath {
-  id: string;
-  path: string; // Path to the temp file
-  filename: string;
-  mimeType: string;
-}
-
 // Available models for feature execution
 export type ClaudeModel = 'opus' | 'sonnet' | 'haiku';
-export type AgentModel = ClaudeModel;
 
-// Model provider type
-export type ModelProvider = 'claude';
-
-// Thinking level (budget_tokens) options
-export type ThinkingLevel = 'none' | 'low' | 'medium' | 'high' | 'ultrathink';
-
-// Planning mode for feature specifications
-export type PlanningMode = 'skip' | 'lite' | 'spec' | 'full';
-
-// AI Provider Profile - user-defined presets for model configurations
-export interface AIProfile {
-  id: string;
-  name: string;
-  description: string;
-  model: AgentModel;
-  thinkingLevel: ThinkingLevel;
-  provider: ModelProvider;
-  isBuiltIn: boolean; // Built-in profiles cannot be deleted
-  icon?: string; // Optional icon name from lucide
-}
-
-export interface Feature {
+export interface Feature extends Omit<
+  BaseFeature,
+  'steps' | 'imagePaths' | 'textFilePaths' | 'status'
+> {
   id: string;
   title?: string;
   titleGenerating?: boolean;
   category: string;
   description: string;
+  steps: string[]; // Required in UI (not optional)
   status: 'backlog' | 'in_progress' | 'waiting_approval' | 'verified' | 'completed';
-  images?: FeatureImage[];
-  imagePaths?: FeatureImagePath[]; // Paths to temp files for agent context
-  startedAt?: string; // ISO timestamp for when the card moved to in_progress
-  skipTests?: boolean; // When true, skip TDD approach and require manual verification
-  summary?: string; // Summary of what was done/modified by the agent
-  model?: AgentModel; // Model to use for this feature (defaults to opus)
-  thinkingLevel?: ThinkingLevel; // Thinking level for extended thinking (defaults to none)
-  error?: string; // Error message if the agent errored during processing
-  priority?: number; // Priority: 1 = high, 2 = medium, 3 = low
-  dependencies?: string[]; // Array of feature IDs this feature depends on
-  // Branch info - worktree path is derived at runtime from branchName
-  branchName?: string; // Name of the feature branch (undefined = use current worktree)
-  justFinishedAt?: string; // ISO timestamp when agent just finished and moved to waiting_approval (shows badge for 2 minutes)
-  planningMode?: PlanningMode; // Planning mode for this feature
-  planSpec?: PlanSpec; // Generated spec/plan data
-  requirePlanApproval?: boolean; // Whether to pause and require manual approval before implementation
-  prUrl?: string; // Pull request URL when a PR has been created for this feature
+  images?: FeatureImage[]; // UI-specific base64 images
+  imagePaths?: FeatureImagePath[]; // Stricter type than base (no string | union)
+  textFilePaths?: FeatureTextFilePath[]; // Text file attachments for context
+  justFinishedAt?: string; // UI-specific: ISO timestamp when agent just finished
+  prUrl?: string; // UI-specific: Pull request URL
 }
 
 // Parsed task from spec (for spec and full planning modes)
@@ -535,6 +518,73 @@ export interface AppState {
     planContent: string;
     planningMode: 'lite' | 'spec' | 'full';
   } | null;
+
+  // Claude Usage Tracking
+  claudeRefreshInterval: number; // Refresh interval in seconds (default: 60)
+  claudeUsage: ClaudeUsage | null;
+  claudeUsageLastUpdated: number | null;
+}
+
+// Claude Usage interface matching the server response
+export type ClaudeUsage = {
+  sessionTokensUsed: number;
+  sessionLimit: number;
+  sessionPercentage: number;
+  sessionResetTime: string;
+  sessionResetText: string;
+
+  weeklyTokensUsed: number;
+  weeklyLimit: number;
+  weeklyPercentage: number;
+  weeklyResetTime: string;
+  weeklyResetText: string;
+
+  sonnetWeeklyTokensUsed: number;
+  sonnetWeeklyPercentage: number;
+  sonnetResetText: string;
+
+  costUsed: number | null;
+  costLimit: number | null;
+  costCurrency: string | null;
+
+  lastUpdated: string;
+  userTimezone: string;
+};
+
+// Response type for Claude usage API (can be success or error)
+export type ClaudeUsageResponse = ClaudeUsage | { error: string; message?: string };
+
+/**
+ * Check if Claude usage is at its limit (any of: session >= 100%, weekly >= 100%, OR cost >= limit)
+ * Returns true if any limit is reached, meaning auto mode should pause feature pickup.
+ */
+export function isClaudeUsageAtLimit(claudeUsage: ClaudeUsage | null): boolean {
+  if (!claudeUsage) {
+    // No usage data available - don't block
+    return false;
+  }
+
+  // Check session limit (5-hour window)
+  if (claudeUsage.sessionPercentage >= 100) {
+    return true;
+  }
+
+  // Check weekly limit
+  if (claudeUsage.weeklyPercentage >= 100) {
+    return true;
+  }
+
+  // Check cost limit (if configured)
+  if (
+    claudeUsage.costLimit !== null &&
+    claudeUsage.costLimit > 0 &&
+    claudeUsage.costUsed !== null &&
+    claudeUsage.costUsed >= claudeUsage.costLimit
+  ) {
+    return true;
+  }
+
+  return false;
 }
 
 // Default background settings for board backgrounds
@@ -1183,7 +1233,7 @@ export const useAppStore = create<AppState & AppActions>()(
 
       addFeature: (feature) => {
         const id = feature.id || `feature-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        const featureWithId = { ...feature, id } as Feature;
+        const featureWithId = { ...feature, id } as unknown as Feature;
         set({ features: [...get().features, featureWithId] });
         return featureWithId;
       },
@@ -2485,6 +2535,15 @@ export const useAppStore = create<AppState & AppActions>()(
 
       // Plan Approval actions
       setPendingPlanApproval: (approval) => set({ pendingPlanApproval: approval }),
+
+      // Claude Usage Tracking actions
+      setClaudeRefreshInterval: (interval: number) => set({ claudeRefreshInterval: interval }),
+      setClaudeUsageLastUpdated: (timestamp: number) => set({ claudeUsageLastUpdated: timestamp }),
+      setClaudeUsage: (usage: ClaudeUsage | null) =>
+        set({
+          claudeUsage: usage,
+          claudeUsageLastUpdated: usage ? Date.now() : null,
+        }),
 
       // Reset
       reset: () => set(initialState),

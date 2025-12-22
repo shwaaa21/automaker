@@ -1,10 +1,11 @@
 import { useState, useCallback } from 'react';
-import type { ImageAttachment } from '@/store/app-store';
+import type { ImageAttachment, TextFileAttachment } from '@/store/app-store';
 
 export interface QueuedMessage {
   id: string;
   content: string;
   images?: ImageAttachment[];
+  textFiles?: TextFileAttachment[];
   timestamp: Date;
 }
 
@@ -15,7 +16,11 @@ interface UseMessageQueueOptions {
 interface UseMessageQueueResult {
   queuedMessages: QueuedMessage[];
   isProcessingQueue: boolean;
-  addToQueue: (content: string, images?: ImageAttachment[]) => void;
+  addToQueue: (
+    content: string,
+    images?: ImageAttachment[],
+    textFiles?: TextFileAttachment[]
+  ) => void;
   clearQueue: () => void;
   removeFromQueue: (messageId: string) => void;
   processNext: () => Promise<void>;
@@ -31,16 +36,20 @@ export function useMessageQueue({ onProcessNext }: UseMessageQueueOptions): UseM
   const [queuedMessages, setQueuedMessages] = useState<QueuedMessage[]>([]);
   const [isProcessingQueue, setIsProcessingQueue] = useState(false);
 
-  const addToQueue = useCallback((content: string, images?: ImageAttachment[]) => {
-    const queuedMessage: QueuedMessage = {
-      id: `queued-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      content: content.trim(),
-      images,
-      timestamp: new Date(),
-    };
+  const addToQueue = useCallback(
+    (content: string, images?: ImageAttachment[], textFiles?: TextFileAttachment[]) => {
+      const queuedMessage: QueuedMessage = {
+        id: `queued-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        content: content.trim(),
+        images,
+        textFiles,
+        timestamp: new Date(),
+      };
 
-    setQueuedMessages((prev) => [...prev, queuedMessage]);
-  }, []);
+      setQueuedMessages((prev) => [...prev, queuedMessage]);
+    },
+    []
+  );
 
   const removeFromQueue = useCallback((messageId: string) => {
     setQueuedMessages((prev) => prev.filter((msg) => msg.id !== messageId));

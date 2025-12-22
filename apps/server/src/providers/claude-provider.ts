@@ -153,9 +153,9 @@ export class ClaudeProvider extends BaseProvider {
         tier: 'standard' as const,
       },
       {
-        id: 'claude-3-5-haiku-20241022',
-        name: 'Claude 3.5 Haiku',
-        modelString: 'claude-3-5-haiku-20241022',
+        id: 'claude-haiku-4-5-20251001',
+        name: 'Claude Haiku 4.5',
+        modelString: 'claude-haiku-4-5-20251001',
         provider: 'anthropic',
         description: 'Fastest Claude model',
         contextWindow: 200000,
