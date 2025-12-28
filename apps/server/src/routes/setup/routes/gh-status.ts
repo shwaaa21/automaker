@@ -96,15 +96,22 @@ async function getGhStatus(): Promise<GhStatus> {
 
   // Check authentication status by actually making an API call
   // gh auth status can return non-zero even when GH_TOKEN is valid
+  let apiCallSucceeded = false;
   try {
     const { stdout } = await execAsync('gh api user --jq ".login"', { env: execEnv });
     const user = stdout.trim();
     if (user) {
       status.authenticated = true;
       status.user = user;
+      apiCallSucceeded = true;
     }
+    // If stdout is empty, fall through to gh auth status fallback
   } catch {
-    // API call failed - try gh auth status as fallback
+    // API call failed - fall through to gh auth status fallback
+  }
+
+  // Fallback: try gh auth status if API call didn't succeed
+  if (!apiCallSucceeded) {
     try {
       const { stdout } = await execAsync('gh auth status', { env: execEnv });
       status.authenticated = true;

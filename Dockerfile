@@ -8,7 +8,7 @@
 # =============================================================================
 # BASE STAGE - Common setup for all builds (DRY: defined once, used by all)
 # =============================================================================
-FROM node:20-alpine AS base
+FROM node:22-alpine AS base
 
 # Install build dependencies for native modules (node-pty)
 RUN apk add --no-cache python3 make g++
@@ -51,7 +51,7 @@ RUN npm run build:packages && npm run build --workspace=apps/server
 # =============================================================================
 # SERVER PRODUCTION STAGE
 # =============================================================================
-FROM node:20-alpine AS server
+FROM node:22-alpine AS server
 
 # Install git, curl, bash (for terminal), and GitHub CLI (pinned version, multi-arch)
 RUN apk add --no-cache git curl bash && \
@@ -109,9 +109,9 @@ ENV DATA_DIR=/data
 # Expose port
 EXPOSE 3008
 
-# Health check
+# Health check (using curl since it's already installed, more reliable than busybox wget)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:3008/api/health || exit 1
+    CMD curl -f http://localhost:3008/api/health || exit 1
 
 # Start server
 CMD ["node", "apps/server/dist/index.js"]
