@@ -53,8 +53,8 @@ RUN npm run build:packages && npm run build --workspace=apps/server
 # =============================================================================
 FROM node:22-alpine AS server
 
-# Install git, curl, bash (for terminal), and GitHub CLI (pinned version, multi-arch)
-RUN apk add --no-cache git curl bash && \
+# Install git, curl, bash (for terminal), su-exec (for user switching), and GitHub CLI (pinned version, multi-arch)
+RUN apk add --no-cache git curl bash su-exec && \
     GH_VERSION="2.63.2" && \
     ARCH=$(uname -m) && \
     case "$ARCH" in \
@@ -72,9 +72,11 @@ RUN npm install -g @anthropic-ai/claude-code
 
 WORKDIR /app
 
-# Create non-root user
+# Create non-root user with home directory
 RUN addgroup -g 1001 -S automaker && \
-    adduser -S automaker -u 1001
+    adduser -S automaker -u 1001 -h /home/automaker && \
+    mkdir -p /home/automaker && \
+    chown automaker:automaker /home/automaker
 
 # Copy root package.json (needed for workspace resolution)
 COPY --from=server-builder /app/package*.json ./
@@ -98,12 +100,17 @@ RUN git config --system --add safe.directory '*' && \
     # Use gh as credential helper (works with GH_TOKEN env var)
     git config --system credential.helper '!gh auth git-credential'
 
-# Switch to non-root user
-USER automaker
+# Copy entrypoint script for fixing permissions on mounted volumes
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# Note: We stay as root here so entrypoint can fix permissions
+# The entrypoint script will switch to automaker user before running the command
 
 # Environment variables
 ENV PORT=3008
 ENV DATA_DIR=/data
+ENV HOME=/home/automaker
 
 # Expose port
 EXPOSE 3008
@@ -111,6 +118,9 @@ EXPOSE 3008
 # Health check (using curl since it's already installed, more reliable than busybox wget)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:3008/api/health || exit 1
+
+# Use entrypoint to fix permissions before starting
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 
 # Start server
 CMD ["node", "apps/server/dist/index.js"]

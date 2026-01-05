@@ -231,7 +231,9 @@ async function main() {
     } else if (choice === '3') {
       console.log('');
       log('Launching Docker Container (Isolated Mode)...', 'blue');
-      log('Building and starting Docker containers...', 'yellow');
+      log('Starting Docker containers...', 'yellow');
+      log('Note: Containers will only rebuild if images are missing.', 'yellow');
+      log('To force a rebuild, run: docker compose up --build', 'yellow');
       console.log('');
 
       // Check if ANTHROPIC_API_KEY is set
@@ -242,8 +244,9 @@ async function main() {
         console.log('');
       }
 
-      // Build and start containers with docker-compose
-      processes.docker = crossSpawn('docker', ['compose', 'up', '--build'], {
+      // Start containers with docker-compose (without --build to preserve volumes)
+      // Images will only be built if they don't exist
+      processes.docker = crossSpawn('docker', ['compose', 'up'], {
         stdio: 'inherit',
         cwd: __dirname,
         env: {

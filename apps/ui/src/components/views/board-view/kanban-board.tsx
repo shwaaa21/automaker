@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { HotkeyButton } from '@/components/ui/hotkey-button';
 import { KanbanColumn, KanbanCard } from './components';
 import { Feature } from '@/store/app-store';
-import { FastForward, Lightbulb, Archive, Plus, Settings2 } from 'lucide-react';
+import { FastForward, Archive, Plus, Settings2 } from 'lucide-react';
 import { useKeyboardShortcutsConfig } from '@/hooks/use-keyboard-shortcuts';
 import { useResponsiveKanban } from '@/hooks/use-responsive-kanban';
 import { getColumnsWithPipeline, type Column, type ColumnId } from './constants';
@@ -47,8 +47,6 @@ interface KanbanBoardProps {
   runningAutoTasks: string[];
   shortcuts: ReturnType<typeof useKeyboardShortcutsConfig>;
   onStartNextFeatures: () => void;
-  onShowSuggestions: () => void;
-  suggestionsCount: number;
   onArchiveAllVerified: () => void;
   pipelineConfig: PipelineConfig | null;
   onOpenPipelineSettings?: () => void;
@@ -82,8 +80,6 @@ export function KanbanBoard({
   runningAutoTasks,
   shortcuts,
   onStartNextFeatures,
-  onShowSuggestions,
-  suggestionsCount,
   onArchiveAllVerified,
   pipelineConfig,
   onOpenPipelineSettings,
@@ -130,40 +126,20 @@ export function KanbanBoard({
                       Complete All
                     </Button>
                   ) : column.id === 'backlog' ? (
-                    <div className="flex items-center gap-1">
-                      <Button
+                    columnFeatures.length > 0 && (
+                      <HotkeyButton
                         variant="ghost"
                         size="sm"
-                        className="h-6 w-6 p-0 text-yellow-500 hover:text-yellow-400 hover:bg-yellow-500/10 relative"
-                        onClick={onShowSuggestions}
-                        title="Feature Suggestions"
-                        data-testid="feature-suggestions-button"
+                        className="h-6 px-2 text-xs text-primary hover:text-primary hover:bg-primary/10"
+                        onClick={onStartNextFeatures}
+                        hotkey={shortcuts.startNext}
+                        hotkeyActive={false}
+                        data-testid="start-next-button"
                       >
-                        <Lightbulb className="w-3.5 h-3.5" />
-                        {suggestionsCount > 0 && (
-                          <span
-                            className="absolute -top-1 -right-1 w-4 h-4 text-[9px] font-mono rounded-full bg-yellow-500 text-black flex items-center justify-center"
-                            data-testid="suggestions-count"
-                          >
-                            {suggestionsCount}
-                          </span>
-                        )}
-                      </Button>
-                      {columnFeatures.length > 0 && (
-                        <HotkeyButton
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 px-2 text-xs text-primary hover:text-primary hover:bg-primary/10"
-                          onClick={onStartNextFeatures}
-                          hotkey={shortcuts.startNext}
-                          hotkeyActive={false}
-                          data-testid="start-next-button"
-                        >
-                          <FastForward className="w-3 h-3 mr-1" />
-                          Make
-                        </HotkeyButton>
-                      )}
-                    </div>
+                        <FastForward className="w-3 h-3 mr-1" />
+                        Make
+                      </HotkeyButton>
+                    )
                   ) : column.id === 'in_progress' ? (
                     <Button
                       variant="ghost"

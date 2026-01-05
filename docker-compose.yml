@@ -59,6 +59,10 @@ services:
       # This volume persists data between restarts but is container-managed
       - automaker-data:/data
 
+      # Persist Claude CLI OAuth session keys across container restarts
+      # This allows 'claude login' authentication to persist between restarts
+      - automaker-claude-config:/home/automaker/.claude
+
       # NO host directory mounts - container cannot access your laptop files
       # If you need to work on a project, create it INSIDE the container
       # or use a separate docker-compose override file
@@ -72,3 +76,8 @@ volumes:
   automaker-data:
     name: automaker-data
     # Named volume - completely isolated from host filesystem
+
+  automaker-claude-config:
+    name: automaker-claude-config
+    # Named volume for Claude CLI OAuth session keys and configuration
+    # Persists authentication across container restarts

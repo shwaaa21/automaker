@@ -23,6 +23,17 @@ export {
   getCredentialsPath,
   getProjectSettingsPath,
   ensureDataDir,
+  // Ideation paths
+  getIdeationDir,
+  getIdeasDir,
+  getIdeaDir,
+  getIdeaPath,
+  getIdeaAttachmentsDir,
+  getIdeationSessionsDir,
+  getIdeationSessionPath,
+  getIdeationDraftsDir,
+  getIdeationAnalysisPath,
+  ensureIdeationDir,
 } from './paths.js';
 
 // Subprocess management
@@ -55,6 +66,21 @@ export {
   type NodeFinderResult,
   type NodeFinderOptions,
 } from './node-finder.js';
+
+// WSL (Windows Subsystem for Linux) utilities
+export {
+  isWslAvailable,
+  clearWslCache,
+  getDefaultWslDistribution,
+  getWslDistributions,
+  findCliInWsl,
+  execInWsl,
+  createWslCommand,
+  windowsToWslPath,
+  wslToWindowsPath,
+  type WslCliResult,
+  type WslOptions,
+} from './wsl.js';
 
 // System paths for tool detection (GitHub CLI, Claude CLI, Node.js, etc.)
 export * as systemPaths from './system-paths.js';
