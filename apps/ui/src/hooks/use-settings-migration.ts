@@ -234,6 +234,8 @@ export async function syncSettingsToServer(): Promise<boolean> {
       keyboardShortcuts: state.keyboardShortcuts,
       aiProfiles: state.aiProfiles,
       mcpServers: state.mcpServers,
+      enableSkills: state.enableSkills,
+      skillsSources: state.skillsSources,
       promptCustomization: state.promptCustomization,
       projects: state.projects,
       trashedProjects: state.trashedProjects,

@@ -11,17 +11,20 @@ import { toast } from 'sonner';
 import { getElectronAPI } from '@/lib/electron';
 
 export function useSkillsSettings() {
-  const { settings } = useAppStore();
+  const enabled = useAppStore((state) => state.enableSkills);
+  const sources = useAppStore((state) => state.skillsSources);
   const [isLoading, setIsLoading] = useState(false);
-
-  const enabled = settings?.enableSkills ?? true;
-  const sources = settings?.skillsSources ?? ['user', 'project'];
 
   const updateEnabled = async (newEnabled: boolean) => {
     setIsLoading(true);
     try {
       const api = getElectronAPI();
+      if (!api.settings) {
+        throw new Error('Settings API not available');
+      }
       await api.settings.updateGlobal({ enableSkills: newEnabled });
+      // Update local store after successful server update
+      useAppStore.setState({ enableSkills: newEnabled });
       toast.success(newEnabled ? 'Skills enabled' : 'Skills disabled');
     } catch (error) {
       toast.error('Failed to update skills settings');
@@ -35,7 +38,12 @@ export function useSkillsSettings() {
     setIsLoading(true);
     try {
       const api = getElectronAPI();
+      if (!api.settings) {
+        throw new Error('Settings API not available');
+      }
       await api.settings.updateGlobal({ skillsSources: newSources });
+      // Update local store after successful server update
+      useAppStore.setState({ skillsSources: newSources });
       toast.success('Skills sources updated');
     } catch (error) {
       toast.error('Failed to update skills sources');

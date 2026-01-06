@@ -512,6 +512,10 @@ export interface AppState {
   // MCP Servers
   mcpServers: MCPServerConfig[]; // List of configured MCP servers for agent use
 
+  // Skills Configuration
+  enableSkills: boolean; // Enable Skills functionality (loads from .claude/skills/ directories)
+  skillsSources: Array<'user' | 'project'>; // Which directories to load Skills from
+
   // Prompt Customization
   promptCustomization: PromptCustomization; // Custom prompts for Auto Mode, Agent, Backlog Plan, Enhancement
 
@@ -1022,6 +1026,8 @@ const initialState: AppState = {
   enableSandboxMode: false, // Default to disabled (can be enabled for additional security)
   skipSandboxWarning: false, // Default to disabled (show sandbox warning dialog)
   mcpServers: [], // No MCP servers configured by default
+  enableSkills: true, // Skills enabled by default
+  skillsSources: ['user', 'project'] as Array<'user' | 'project'>, // Load from both sources by default
   promptCustomization: {}, // Empty by default - all prompts use built-in defaults
   aiProfiles: DEFAULT_AI_PROFILES,
   projectAnalysis: null,
