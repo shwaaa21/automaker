@@ -147,7 +147,7 @@ export const checkExternalServerMode = async (): Promise<boolean> => {
     const api = window.electronAPI as any;
     if (api?.isExternalServerMode) {
       try {
-        cachedExternalServerMode = await api.isExternalServerMode();
+        cachedExternalServerMode = Boolean(await api.isExternalServerMode());
         return cachedExternalServerMode;
       } catch (error) {
         logger.warn('Failed to check external server mode:', error);
@@ -496,19 +496,29 @@ export class HttpApiClient implements ElectronAPI {
 
     this.isConnecting = true;
 
-    // Electron mode must authenticate with the injected API key.
-    // If the key isn't ready yet, do NOT fall back to /api/auth/token (web-mode flow).
+    // Electron mode typically authenticates with the injected API key.
+    // However, in external-server/cookie-auth flows, the API key may be unavailable.
+    // In that case, fall back to the same wsToken/cookie authentication used in web mode
+    // so the UI still receives real-time events (running tasks, logs, etc.).
     if (isElectronMode()) {
       const apiKey = getApiKey();
       if (!apiKey) {
-        logger.warn('Electron mode: API key not ready, delaying WebSocket connect');
-        this.isConnecting = false;
-        if (!this.reconnectTimer) {
-          this.reconnectTimer = setTimeout(() => {
-            this.reconnectTimer = null;
-            this.connectWebSocket();
-          }, 250);
-        }
+        logger.warn('Electron mode: API key missing, attempting wsToken/cookie auth for WebSocket');
+        this.fetchWsToken()
+          .then((wsToken) => {
+            const wsUrl = this.serverUrl.replace(/^http/, 'ws') + '/api/events';
+            if (wsToken) {
+              this.establishWebSocket(`${wsUrl}?wsToken=${encodeURIComponent(wsToken)}`);
+            } else {
+              // Fallback: try connecting without token (will fail if not authenticated)
+              logger.warn('No wsToken available, attempting WebSocket connection anyway');
+              this.establishWebSocket(wsUrl);
+            }
+          })
+          .catch((error) => {
+            logger.error('Failed to prepare WebSocket connection (electron fallback):', error);
+            this.isConnecting = false;
+          });
         return;
       }
 
