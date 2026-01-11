@@ -13,7 +13,10 @@ import { cn } from '@/lib/utils';
 import { logout } from '@/lib/http-api-client';
 import { useAuthStore } from '@/store/auth-store';
 import { useAppStore } from '@/store/app-store';
-import { useAvailableEditors } from '@/components/views/board-view/worktree-panel/hooks/use-available-editors';
+import {
+  useAvailableEditors,
+  useEffectiveDefaultEditor,
+} from '@/components/views/board-view/worktree-panel/hooks/use-available-editors';
 import { getEditorIcon } from '@/components/icons/editor-icons';
 
 export function AccountSection() {
@@ -25,20 +28,16 @@ export function AccountSection() {
   const defaultEditorCommand = useAppStore((s) => s.defaultEditorCommand);
   const setDefaultEditorCommand = useAppStore((s) => s.setDefaultEditorCommand);
 
-  // Get effective default editor (respecting auto-detect order: Cursor > VS Code > first)
-  const getEffectiveDefaultEditor = () => {
-    if (defaultEditorCommand) {
-      return editors.find((e) => e.command === defaultEditorCommand) ?? editors[0];
-    }
-    // Auto-detect: prefer Cursor, then VS Code, then first available
-    const cursor = editors.find((e) => e.command === 'cursor');
-    if (cursor) return cursor;
-    const vscode = editors.find((e) => e.command === 'code');
-    if (vscode) return vscode;
-    return editors[0];
-  };
+  // Use shared hook for effective default editor
+  const effectiveEditor = useEffectiveDefaultEditor(editors);
 
-  const effectiveEditor = getEffectiveDefaultEditor();
+  // Normalize Select value: if saved editor isn't found, show 'auto'
+  const hasSavedEditor =
+    !!defaultEditorCommand && editors.some((e) => e.command === defaultEditorCommand);
+  const selectValue = hasSavedEditor ? defaultEditorCommand : 'auto';
+
+  // Get icon component for the effective editor
+  const EffectiveEditorIcon = effectiveEditor ? getEditorIcon(effectiveEditor.command) : null;
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -87,7 +86,7 @@ export function AccountSection() {
             </div>
           </div>
           <Select
-            value={defaultEditorCommand ?? 'auto'}
+            value={selectValue}
             onValueChange={(value) => setDefaultEditorCommand(value === 'auto' ? null : value)}
             disabled={isLoadingEditors || editors.length === 0}
           >
@@ -95,12 +94,9 @@ export function AccountSection() {
               <SelectValue placeholder="Select editor">
                 {effectiveEditor ? (
                   <span className="flex items-center gap-2">
-                    {(() => {
-                      const Icon = getEditorIcon(effectiveEditor.command);
-                      return <Icon className="w-4 h-4" />;
-                    })()}
+                    {EffectiveEditorIcon && <EffectiveEditorIcon className="w-4 h-4" />}
                     {effectiveEditor.name}
-                    {!defaultEditorCommand && (
+                    {selectValue === 'auto' && (
                       <span className="text-muted-foreground text-xs">(Auto)</span>
                     )}
                   </span>

@@ -28,9 +28,8 @@ import {
 import { cn } from '@/lib/utils';
 import type { WorktreeInfo, DevServerInfo, PRInfo, GitRepoStatus } from '../types';
 import { TooltipWrapper } from './tooltip-wrapper';
-import { useAvailableEditors } from '../hooks/use-available-editors';
+import { useAvailableEditors, useEffectiveDefaultEditor } from '../hooks/use-available-editors';
 import { getEditorIcon } from '@/components/icons/editor-icons';
-import { useAppStore } from '@/store/app-store';
 
 interface WorktreeActionsDropdownProps {
   worktree: WorktreeInfo;
@@ -84,29 +83,18 @@ export function WorktreeActionsDropdown({
   onOpenDevServerUrl,
 }: WorktreeActionsDropdownProps) {
   // Get available editors for the "Open In" submenu
-  const { editors, hasMultipleEditors } = useAvailableEditors();
+  const { editors } = useAvailableEditors();
 
-  // Get the user's preferred default editor from settings
-  const defaultEditorCommand = useAppStore((s) => s.defaultEditorCommand);
-
-  // Calculate effective default editor based on user setting or auto-detect (Cursor > VS Code > first)
-  const getEffectiveDefaultEditor = () => {
-    if (defaultEditorCommand) {
-      const found = editors.find((e) => e.command === defaultEditorCommand);
-      if (found) return found;
-    }
-    // Auto-detect: prefer Cursor, then VS Code, then first available
-    const cursor = editors.find((e) => e.command === 'cursor');
-    if (cursor) return cursor;
-    const vscode = editors.find((e) => e.command === 'code');
-    if (vscode) return vscode;
-    return editors[0];
-  };
-
-  const effectiveDefaultEditor = getEffectiveDefaultEditor();
+  // Use shared hook for effective default editor
+  const effectiveDefaultEditor = useEffectiveDefaultEditor(editors);
 
   // Get other editors (excluding the default) for the submenu
   const otherEditors = editors.filter((e) => e.command !== effectiveDefaultEditor?.command);
+
+  // Get icon component for the effective editor (avoid IIFE in JSX)
+  const DefaultEditorIcon = effectiveDefaultEditor
+    ? getEditorIcon(effectiveDefaultEditor.command)
+    : null;
 
   // Check if there's a PR associated with this worktree from stored metadata
   const hasPR = !!worktree.pr;
@@ -240,10 +228,7 @@ export function WorktreeActionsDropdown({
                 onClick={() => onOpenInEditor(worktree, effectiveDefaultEditor.command)}
                 className="text-xs flex-1 pr-0 rounded-r-none"
               >
-                {(() => {
-                  const EditorIcon = getEditorIcon(effectiveDefaultEditor.command);
-                  return <EditorIcon className="w-3.5 h-3.5 mr-2" />;
-                })()}
+                {DefaultEditorIcon && <DefaultEditorIcon className="w-3.5 h-3.5 mr-2" />}
                 Open in {effectiveDefaultEditor.name}
               </DropdownMenuItem>
               {/* Chevron trigger for submenu with other editors and Copy Path */}

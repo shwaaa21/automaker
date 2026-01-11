@@ -6,6 +6,7 @@
 import type { Request, Response } from 'express';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { homedir } from 'os';
 import { getErrorMessage, logError } from '../common.js';
 
 const execAsync = promisify(exec);
@@ -48,7 +49,7 @@ async function findMacApp(appName: string): Promise<string | null> {
 
   // Check ~/Applications (used by JetBrains Toolbox and others)
   try {
-    const homeDir = process.env.HOME || '~';
+    const homeDir = homedir();
     await execAsync(`test -d "${homeDir}/Applications/${appName}.app"`);
     return `${homeDir}/Applications/${appName}.app`;
   } catch {
@@ -57,18 +58,17 @@ async function findMacApp(appName: string): Promise<string | null> {
 }
 
 /**
- * Try to add an editor - checks CLI first, then macOS app bundle
+ * Try to find an editor - checks CLI first, then macOS app bundle
+ * Returns EditorInfo if found, null otherwise
  */
-async function tryAddEditor(
-  editors: EditorInfo[],
+async function findEditor(
   name: string,
   cliCommand: string,
   macAppName: string
-): Promise<void> {
+): Promise<EditorInfo | null> {
   // Try CLI command first
   if (await commandExists(cliCommand)) {
-    editors.push({ name, command: cliCommand });
-    return;
+    return { name, command: cliCommand };
   }
 
   // Try macOS app bundle (checks /Applications and ~/Applications)
@@ -76,9 +76,11 @@ async function tryAddEditor(
     const appPath = await findMacApp(macAppName);
     if (appPath) {
       // Use 'open -a' with full path for apps not in /Applications
-      editors.push({ name, command: `open -a "${appPath}"` });
+      return { name, command: `open -a "${appPath}"` };
     }
   }
+
+  return null;
 }
 
 async function detectAllEditors(): Promise<EditorInfo[]> {
@@ -87,26 +89,29 @@ async function detectAllEditors(): Promise<EditorInfo[]> {
     return cachedEditors;
   }
 
-  const editors: EditorInfo[] = [];
   const isMac = process.platform === 'darwin';
 
-  // Try editors (CLI command, then macOS app bundle)
-  await tryAddEditor(editors, 'Cursor', 'cursor', 'Cursor');
-  await tryAddEditor(editors, 'VS Code', 'code', 'Visual Studio Code');
-  await tryAddEditor(editors, 'Zed', 'zed', 'Zed');
-  await tryAddEditor(editors, 'Sublime Text', 'subl', 'Sublime Text');
-  await tryAddEditor(editors, 'Windsurf', 'windsurf', 'Windsurf');
-  await tryAddEditor(editors, 'Trae', 'trae', 'Trae');
-  await tryAddEditor(editors, 'Rider', 'rider', 'Rider');
-  await tryAddEditor(editors, 'WebStorm', 'webstorm', 'WebStorm');
+  // Check all editors in parallel for better performance
+  const editorChecks = [
+    findEditor('Cursor', 'cursor', 'Cursor'),
+    findEditor('VS Code', 'code', 'Visual Studio Code'),
+    findEditor('Zed', 'zed', 'Zed'),
+    findEditor('Sublime Text', 'subl', 'Sublime Text'),
+    findEditor('Windsurf', 'windsurf', 'Windsurf'),
+    findEditor('Trae', 'trae', 'Trae'),
+    findEditor('Rider', 'rider', 'Rider'),
+    findEditor('WebStorm', 'webstorm', 'WebStorm'),
+    // Xcode (macOS only) - will return null on other platforms
+    isMac ? findEditor('Xcode', 'xed', 'Xcode') : Promise.resolve(null),
+    findEditor('Android Studio', 'studio', 'Android Studio'),
+    findEditor('Antigravity', 'agy', 'Antigravity'),
+  ];
 
-  // Xcode (macOS only)
-  if (isMac) {
-    await tryAddEditor(editors, 'Xcode', 'xed', 'Xcode');
-  }
+  // Wait for all checks to complete in parallel
+  const results = await Promise.all(editorChecks);
 
-  await tryAddEditor(editors, 'Android Studio', 'studio', 'Android Studio');
-  await tryAddEditor(editors, 'Antigravity', 'agy', 'Antigravity');
+  // Filter out null results (editors not found)
+  const editors = results.filter((e): e is EditorInfo => e !== null);
 
   // Always add file manager as fallback
   const platform = process.platform;

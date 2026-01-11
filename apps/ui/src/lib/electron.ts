@@ -1626,7 +1626,24 @@ function createMockWorktreeAPI(): WorktreeAPI {
     },
 
     openInEditor: async (worktreePath: string, editorCommand?: string) => {
-      const editorName = editorCommand === 'cursor' ? 'Cursor' : 'VS Code';
+      // Map editor commands to display names
+      const editorNameMap: Record<string, string> = {
+        cursor: 'Cursor',
+        code: 'VS Code',
+        zed: 'Zed',
+        subl: 'Sublime Text',
+        windsurf: 'Windsurf',
+        trae: 'Trae',
+        rider: 'Rider',
+        webstorm: 'WebStorm',
+        xed: 'Xcode',
+        studio: 'Android Studio',
+        agy: 'Antigravity',
+        open: 'Finder',
+        explorer: 'Explorer',
+        'xdg-open': 'File Manager',
+      };
+      const editorName = editorCommand ? (editorNameMap[editorCommand] ?? 'Editor') : 'VS Code';
       console.log('[Mock] Opening in editor:', worktreePath, 'using:', editorName);
       return {
         success: true,

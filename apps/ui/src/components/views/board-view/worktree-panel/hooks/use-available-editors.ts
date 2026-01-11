@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { createLogger } from '@automaker/utils/logger';
 import { getElectronAPI } from '@/lib/electron';
+import { useAppStore } from '@/store/app-store';
 
 const logger = createLogger('AvailableEditors');
 
@@ -43,4 +44,31 @@ export function useAvailableEditors() {
     // The first editor is the "default" one
     defaultEditor: editors[0] ?? null,
   };
+}
+
+/**
+ * Hook to get the effective default editor based on user settings
+ * Falls back to: Cursor > VS Code > first available editor
+ */
+export function useEffectiveDefaultEditor(editors: EditorInfo[]): EditorInfo | null {
+  const defaultEditorCommand = useAppStore((s) => s.defaultEditorCommand);
+
+  return useMemo(() => {
+    if (editors.length === 0) return null;
+
+    // If user has a saved preference and it exists in available editors, use it
+    if (defaultEditorCommand) {
+      const found = editors.find((e) => e.command === defaultEditorCommand);
+      if (found) return found;
+    }
+
+    // Auto-detect: prefer Cursor, then VS Code, then first available
+    const cursor = editors.find((e) => e.command === 'cursor');
+    if (cursor) return cursor;
+
+    const vscode = editors.find((e) => e.command === 'code');
+    if (vscode) return vscode;
+
+    return editors[0];
+  }, [editors, defaultEditorCommand]);
 }
