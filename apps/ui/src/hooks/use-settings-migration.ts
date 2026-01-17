@@ -533,6 +533,8 @@ export function hydrateStoreFromSettings(settings: GlobalSettings): void {
     path: ref.path,
     lastOpened: ref.lastOpened,
     theme: ref.theme,
+    fontFamilySans: ref.fontFamilySans,
+    fontFamilyMono: ref.fontFamilyMono,
     isFavorite: ref.isFavorite,
     icon: ref.icon,
     customIconPath: ref.customIconPath,
@@ -556,6 +558,8 @@ export function hydrateStoreFromSettings(settings: GlobalSettings): void {
 
   useAppStore.setState({
     theme: settings.theme as unknown as import('@/store/app-store').ThemeMode,
+    fontFamilySans: settings.fontFamilySans ?? null,
+    fontFamilyMono: settings.fontFamilyMono ?? null,
     sidebarOpen: settings.sidebarOpen ?? true,
     chatHistoryOpen: settings.chatHistoryOpen ?? false,
     maxConcurrency: settings.maxConcurrency ?? 3,
@@ -596,6 +600,13 @@ export function hydrateStoreFromSettings(settings: GlobalSettings): void {
     worktreePanelCollapsed: settings.worktreePanelCollapsed ?? false,
     lastProjectDir: settings.lastProjectDir ?? '',
     recentFolders: settings.recentFolders ?? [],
+    // Terminal font (nested in terminalState)
+    ...(settings.terminalFontFamily && {
+      terminalState: {
+        ...current.terminalState,
+        fontFamily: settings.terminalFontFamily,
+      },
+    }),
   });
 
   // Hydrate setup wizard state from global settings (API-backed)
@@ -649,6 +660,7 @@ function buildSettingsUpdateFromStore(): Record<string, unknown> {
     worktreePanelCollapsed: state.worktreePanelCollapsed,
     lastProjectDir: state.lastProjectDir,
     recentFolders: state.recentFolders,
+    terminalFontFamily: state.terminalState.fontFamily,
   };
 }
 

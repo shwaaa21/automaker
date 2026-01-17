@@ -3292,6 +3292,8 @@ export interface Project {
   path: string;
   lastOpened?: string;
   theme?: string; // Per-project theme override (uses ThemeMode from app-store)
+  fontFamilySans?: string; // Per-project UI/sans font override
+  fontFamilyMono?: string; // Per-project code/mono font override
   isFavorite?: boolean; // Pin project to top of dashboard
   icon?: string; // Lucide icon name for project identification
   customIconPath?: string; // Path to custom uploaded icon image in .automaker/images/

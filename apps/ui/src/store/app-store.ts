@@ -4,6 +4,11 @@ import type { Project, TrashedProject } from '@/lib/electron';
 import { getElectronAPI } from '@/lib/electron';
 import { createLogger } from '@automaker/utils/logger';
 import { setItem, getItem } from '@/lib/storage';
+import {
+  UI_SANS_FONT_OPTIONS,
+  UI_MONO_FONT_OPTIONS,
+  DEFAULT_FONT_VALUE,
+} from '@/config/ui-font-options';
 import type {
   Feature as BaseFeature,
   FeatureImagePath,
@@ -65,9 +70,10 @@ export type ViewMode =
   | 'ideation';
 
 export type ThemeMode =
-  | 'light'
-  | 'dark'
+  // Special modes
   | 'system'
+  // Dark themes
+  | 'dark'
   | 'retro'
   | 'dracula'
   | 'nord'
@@ -79,12 +85,40 @@ export type ThemeMode =
   | 'onedark'
   | 'synthwave'
   | 'red'
-  | 'cream'
   | 'sunset'
-  | 'gray';
+  | 'gray'
+  | 'forest'
+  | 'ocean'
+  | 'ember'
+  | 'ayu-dark'
+  | 'ayu-mirage'
+  | 'matcha'
+  // Light themes
+  | 'light'
+  | 'cream'
+  | 'solarizedlight'
+  | 'github'
+  | 'paper'
+  | 'rose'
+  | 'mint'
+  | 'lavender'
+  | 'sand'
+  | 'sky'
+  | 'peach'
+  | 'snow'
+  | 'sepia'
+  | 'gruvboxlight'
+  | 'nordlight'
+  | 'blossom'
+  | 'ayu-light'
+  | 'onelight'
+  | 'bluloco'
+  | 'feather';
 
-// LocalStorage key for theme persistence (fallback when server settings aren't available)
+// LocalStorage keys for persistence (fallback when server settings aren't available)
 export const THEME_STORAGE_KEY = 'automaker:theme';
+export const FONT_SANS_STORAGE_KEY = 'automaker:font-sans';
+export const FONT_MONO_STORAGE_KEY = 'automaker:font-mono';
 
 // Maximum number of output lines to keep in init script state (prevents unbounded memory growth)
 export const MAX_INIT_OUTPUT_LINES = 500;
@@ -121,6 +155,40 @@ export function getStoredTheme(): ThemeMode | null {
  */
 function saveThemeToStorage(theme: ThemeMode): void {
   setItem(THEME_STORAGE_KEY, theme);
+}
+
+/**
+ * Get fonts from localStorage as a fallback
+ * Used before server settings are loaded (e.g., on login/setup pages)
+ */
+export function getStoredFontSans(): string | null {
+  return getItem(FONT_SANS_STORAGE_KEY);
+}
+
+export function getStoredFontMono(): string | null {
+  return getItem(FONT_MONO_STORAGE_KEY);
+}
+
+/**
+ * Save fonts to localStorage for immediate persistence
+ * This is used as a fallback when server settings can't be loaded
+ */
+function saveFontSansToStorage(fontFamily: string | null): void {
+  if (fontFamily) {
+    setItem(FONT_SANS_STORAGE_KEY, fontFamily);
+  } else {
+    // Remove from storage if null (using default)
+    localStorage.removeItem(FONT_SANS_STORAGE_KEY);
+  }
+}
+
+function saveFontMonoToStorage(fontFamily: string | null): void {
+  if (fontFamily) {
+    setItem(FONT_MONO_STORAGE_KEY, fontFamily);
+  } else {
+    // Remove from storage if null (using default)
+    localStorage.removeItem(FONT_MONO_STORAGE_KEY);
+  }
 }
 
 function persistEffectiveThemeForProject(project: Project | null, fallbackTheme: ThemeMode): void {
@@ -509,6 +577,10 @@ export interface AppState {
 
   // Theme
   theme: ThemeMode;
+
+  // Fonts (global defaults)
+  fontFamilySans: string | null; // null = use default Geist Sans
+  fontFamilyMono: string | null; // null = use default Geist Mono
 
   // Features/Kanban
   features: Feature[];
@@ -920,6 +992,14 @@ export interface AppActions {
   getEffectiveTheme: () => ThemeMode; // Get the effective theme (project, global, or preview if set)
   setPreviewTheme: (theme: ThemeMode | null) => void; // Set preview theme for hover preview (null to clear)
 
+  // Font actions (global + per-project override)
+  setFontSans: (fontFamily: string | null) => void; // Set global UI/sans font (null to clear)
+  setFontMono: (fontFamily: string | null) => void; // Set global code/mono font (null to clear)
+  setProjectFontSans: (projectId: string, fontFamily: string | null) => void; // Set per-project UI/sans font override (null = use global)
+  setProjectFontMono: (projectId: string, fontFamily: string | null) => void; // Set per-project code/mono font override (null = use global)
+  getEffectiveFontSans: () => string | null; // Get effective UI font (project override -> global -> null for default)
+  getEffectiveFontMono: () => string | null; // Get effective code font (project override -> global -> null for default)
+
   // Feature actions
   setFeatures: (features: Feature[]) => void;
   updateFeature: (id: string, updates: Partial<Feature>) => void;
@@ -1258,6 +1338,8 @@ const initialState: AppState = {
   mobileSidebarHidden: false, // Sidebar visible by default on mobile
   lastSelectedSessionByProject: {},
   theme: getStoredTheme() || 'dark', // Use localStorage theme as initial value, fallback to 'dark'
+  fontFamilySans: getStoredFontSans(), // Use localStorage font as initial value (null = use default Geist Sans)
+  fontFamilyMono: getStoredFontMono(), // Use localStorage font as initial value (null = use default Geist Mono)
   features: [],
   appSpec: '',
   ipcConnected: false,
@@ -1732,6 +1814,103 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
   },
 
   setPreviewTheme: (theme) => set({ previewTheme: theme }),
+
+  // Font actions (global + per-project override)
+  setFontSans: (fontFamily) => {
+    // Save to localStorage for fallback when server settings aren't available
+    saveFontSansToStorage(fontFamily);
+    set({ fontFamilySans: fontFamily });
+  },
+
+  setFontMono: (fontFamily) => {
+    // Save to localStorage for fallback when server settings aren't available
+    saveFontMonoToStorage(fontFamily);
+    set({ fontFamilyMono: fontFamily });
+  },
+
+  setProjectFontSans: (projectId, fontFamily) => {
+    // Update the project's fontFamilySans property
+    // null means "clear to use global", any string (including 'default') means explicit override
+    const projects = get().projects.map((p) =>
+      p.id === projectId
+        ? { ...p, fontFamilySans: fontFamily === null ? undefined : fontFamily }
+        : p
+    );
+    set({ projects });
+
+    // Also update currentProject if it's the same project
+    const currentProject = get().currentProject;
+    if (currentProject?.id === projectId) {
+      set({
+        currentProject: {
+          ...currentProject,
+          fontFamilySans: fontFamily === null ? undefined : fontFamily,
+        },
+      });
+    }
+  },
+
+  setProjectFontMono: (projectId, fontFamily) => {
+    // Update the project's fontFamilyMono property
+    // null means "clear to use global", any string (including 'default') means explicit override
+    const projects = get().projects.map((p) =>
+      p.id === projectId
+        ? { ...p, fontFamilyMono: fontFamily === null ? undefined : fontFamily }
+        : p
+    );
+    set({ projects });
+
+    // Also update currentProject if it's the same project
+    const currentProject = get().currentProject;
+    if (currentProject?.id === projectId) {
+      set({
+        currentProject: {
+          ...currentProject,
+          fontFamilyMono: fontFamily === null ? undefined : fontFamily,
+        },
+      });
+    }
+  },
+
+  getEffectiveFontSans: () => {
+    const currentProject = get().currentProject;
+    // Return project override if set, otherwise global, otherwise null for default
+    // 'default' value means explicitly using default font, so return null for CSS
+    // Also validate that the font is in the available options list
+    const isValidFont = (font: string | null | undefined): boolean => {
+      if (!font || font === DEFAULT_FONT_VALUE) return true;
+      return UI_SANS_FONT_OPTIONS.some((opt) => opt.value === font);
+    };
+
+    if (currentProject?.fontFamilySans) {
+      const font = currentProject.fontFamilySans;
+      if (!isValidFont(font)) return null; // Fallback to default if font not in list
+      return font === DEFAULT_FONT_VALUE ? null : font;
+    }
+    const globalFont = get().fontFamilySans;
+    if (!isValidFont(globalFont)) return null; // Fallback to default if font not in list
+    return globalFont === DEFAULT_FONT_VALUE ? null : globalFont;
+  },
+
+  getEffectiveFontMono: () => {
+    const currentProject = get().currentProject;
+    // Return project override if set, otherwise global, otherwise null for default
+    // 'default' value means explicitly using default font, so return null for CSS
+    // Also validate that the font is in the available options list
+    const isValidFont = (font: string | null | undefined): boolean => {
+      if (!font || font === DEFAULT_FONT_VALUE) return true;
+      return UI_MONO_FONT_OPTIONS.some((opt) => opt.value === font);
+    };
+
+    if (currentProject?.fontFamilyMono) {
+      const font = currentProject.fontFamilyMono;
+      if (!isValidFont(font)) return null; // Fallback to default if font not in list
+      return font === DEFAULT_FONT_VALUE ? null : font;
+    }
+    const globalFont = get().fontFamilyMono;
+    if (!isValidFont(globalFont)) return null; // Fallback to default if font not in list
+    return globalFont === DEFAULT_FONT_VALUE ? null : globalFont;
+  },
 
   // Feature actions
   setFeatures: (features) => set({ features }),

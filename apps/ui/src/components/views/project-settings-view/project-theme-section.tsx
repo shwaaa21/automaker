@@ -1,8 +1,20 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Palette, Moon, Sun } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Palette, Moon, Sun, Type } from 'lucide-react';
 import { darkThemes, lightThemes, type Theme } from '@/config/theme-options';
+import {
+  UI_SANS_FONT_OPTIONS,
+  UI_MONO_FONT_OPTIONS,
+  DEFAULT_FONT_VALUE,
+} from '@/config/ui-font-options';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store/app-store';
 import type { Project } from '@/lib/electron';
@@ -12,27 +24,123 @@ interface ProjectThemeSectionProps {
 }
 
 export function ProjectThemeSection({ project }: ProjectThemeSectionProps) {
-  const { theme: globalTheme, setProjectTheme } = useAppStore();
-  const [activeTab, setActiveTab] = useState<'dark' | 'light'>('dark');
+  const {
+    theme: globalTheme,
+    fontFamilySans: globalFontSans,
+    fontFamilyMono: globalFontMono,
+    setProjectTheme,
+    setProjectFontSans,
+    setProjectFontMono,
+  } = useAppStore();
 
+  // Theme state
   const projectTheme = project.theme as Theme | undefined;
   const hasCustomTheme = projectTheme !== undefined;
   const effectiveTheme = projectTheme || globalTheme;
 
+  // Determine if current theme is light or dark
+  const isLightTheme = lightThemes.some((t) => t.value === effectiveTheme);
+  const [activeTab, setActiveTab] = useState<'dark' | 'light'>(isLightTheme ? 'light' : 'dark');
+
+  // Helper to validate fonts against available options
+  const isValidSansFont = (font?: string): boolean =>
+    !!font && UI_SANS_FONT_OPTIONS.some((opt) => opt.value === font);
+  const isValidMonoFont = (font?: string): boolean =>
+    !!font && UI_MONO_FONT_OPTIONS.some((opt) => opt.value === font);
+
+  // Helper to get initial font value with validation
+  const getInitialFontValue = (font: string | undefined, validator: (f?: string) => boolean) =>
+    font && validator(font) ? font : DEFAULT_FONT_VALUE;
+
+  // Font local state - tracks what's selected when using custom fonts
+  // Falls back to default if stored font is not in available options
+  const [fontSansLocal, setFontSansLocal] = useState<string>(() =>
+    getInitialFontValue(project.fontFamilySans, isValidSansFont)
+  );
+  const [fontMonoLocal, setFontMonoLocal] = useState<string>(() =>
+    getInitialFontValue(project.fontFamilyMono, isValidMonoFont)
+  );
+
+  // Sync state when project changes
+  useEffect(() => {
+    setFontSansLocal(getInitialFontValue(project.fontFamilySans, isValidSansFont));
+    setFontMonoLocal(getInitialFontValue(project.fontFamilyMono, isValidMonoFont));
+    // Also sync the active tab based on current theme
+    const currentIsLight = lightThemes.some((t) => t.value === (project.theme || globalTheme));
+    setActiveTab(currentIsLight ? 'light' : 'dark');
+  }, [project, globalTheme]);
+
+  // Font state - check if project has custom fonts set
+  const hasCustomFontSans = project.fontFamilySans !== undefined;
+  const hasCustomFontMono = project.fontFamilyMono !== undefined;
+
   const themesToShow = activeTab === 'dark' ? darkThemes : lightThemes;
 
+  // Theme handlers
   const handleThemeChange = (theme: Theme) => {
     setProjectTheme(project.id, theme);
   };
 
   const handleUseGlobalTheme = (checked: boolean) => {
     if (checked) {
-      // Clear project theme to use global
       setProjectTheme(project.id, null);
     } else {
-      // Set project theme to current global theme
       setProjectTheme(project.id, globalTheme);
     }
+  };
+
+  // Font handlers
+  const handleUseGlobalFontSans = (checked: boolean) => {
+    if (checked) {
+      // Clear project font to use global
+      setProjectFontSans(project.id, null);
+      setFontSansLocal(DEFAULT_FONT_VALUE);
+    } else {
+      // Set explicit project override - use 'default' value to indicate explicit default choice
+      const fontToSet = globalFontSans || DEFAULT_FONT_VALUE;
+      setFontSansLocal(fontToSet);
+      // Store the actual value (including 'default') so hasCustomFontSans stays true
+      setProjectFontSans(project.id, fontToSet);
+    }
+  };
+
+  const handleUseGlobalFontMono = (checked: boolean) => {
+    if (checked) {
+      // Clear project font to use global
+      setProjectFontMono(project.id, null);
+      setFontMonoLocal(DEFAULT_FONT_VALUE);
+    } else {
+      // Set explicit project override - use 'default' value to indicate explicit default choice
+      const fontToSet = globalFontMono || DEFAULT_FONT_VALUE;
+      setFontMonoLocal(fontToSet);
+      // Store the actual value (including 'default') so hasCustomFontMono stays true
+      setProjectFontMono(project.id, fontToSet);
+    }
+  };
+
+  const handleFontSansChange = (value: string) => {
+    setFontSansLocal(value);
+    // Store the actual value (including 'default') - only null clears to use global
+    setProjectFontSans(project.id, value);
+  };
+
+  const handleFontMonoChange = (value: string) => {
+    setFontMonoLocal(value);
+    // Store the actual value (including 'default') - only null clears to use global
+    setProjectFontMono(project.id, value);
+  };
+
+  // Get display label for global font
+  const getGlobalFontSansLabel = () => {
+    if (!globalFontSans) return 'Default (Geist Sans)';
+    const option = UI_SANS_FONT_OPTIONS.find((o) => o.value === globalFontSans);
+    return option?.label || globalFontSans;
+  };
+
+  const getGlobalFontMonoLabel = () => {
+    if (!globalFontMono) return 'Default (Geist Mono)';
+    const option = UI_MONO_FONT_OPTIONS.find((o) => o.value === globalFontMono);
+    return option?.label || globalFontMono;
   };
 
   return (
@@ -49,10 +157,10 @@ export function ProjectThemeSection({ project }: ProjectThemeSectionProps) {
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500/20 to-brand-600/10 flex items-center justify-center border border-brand-500/20">
             <Palette className="w-5 h-5 text-brand-500" />
           </div>
-          <h2 className="text-lg font-semibold text-foreground tracking-tight">Theme</h2>
+          <h2 className="text-lg font-semibold text-foreground tracking-tight">Theme & Fonts</h2>
         </div>
         <p className="text-sm text-muted-foreground/80 ml-12">
-          Customize the theme for this project.
+          Customize the appearance for this project.
         </p>
       </div>
       <div className="p-6 space-y-6">
@@ -158,6 +266,122 @@ export function ProjectThemeSection({ project }: ProjectThemeSectionProps) {
             </p>
           </div>
         )}
+
+        {/* Fonts Section */}
+        <div className="space-y-4 pt-6 border-t border-border/50">
+          <div className="flex items-center gap-2 mb-4">
+            <Type className="w-4 h-4 text-muted-foreground" />
+            <Label className="text-foreground font-medium">Fonts</Label>
+          </div>
+
+          <div className="space-y-4">
+            {/* UI Font */}
+            <div className="space-y-3">
+              <div className="group flex items-start space-x-3 p-3 rounded-xl hover:bg-accent/30 transition-colors duration-200 -mx-3">
+                <Checkbox
+                  id="use-global-font-sans"
+                  checked={!hasCustomFontSans}
+                  onCheckedChange={handleUseGlobalFontSans}
+                  className="mt-1"
+                />
+                <div className="flex-1 space-y-1.5">
+                  <Label
+                    htmlFor="use-global-font-sans"
+                    className="text-foreground cursor-pointer font-medium"
+                  >
+                    Use Global UI Font
+                  </Label>
+                  {!hasCustomFontSans && (
+                    <p className="text-xs text-muted-foreground">
+                      Currently using:{' '}
+                      <span className="font-medium">{getGlobalFontSansLabel()}</span>
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {hasCustomFontSans && (
+                <div className="ml-6 space-y-2">
+                  <Label htmlFor="ui-font-select" className="text-sm">
+                    Project UI Font
+                  </Label>
+                  <Select value={fontSansLocal} onValueChange={handleFontSansChange}>
+                    <SelectTrigger id="ui-font-select" className="w-full">
+                      <SelectValue placeholder="Default (Geist Sans)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {UI_SANS_FONT_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          <span
+                            style={{
+                              fontFamily:
+                                option.value === DEFAULT_FONT_VALUE ? undefined : option.value,
+                            }}
+                          >
+                            {option.label}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+
+            {/* Code Font */}
+            <div className="space-y-3">
+              <div className="group flex items-start space-x-3 p-3 rounded-xl hover:bg-accent/30 transition-colors duration-200 -mx-3">
+                <Checkbox
+                  id="use-global-font-mono"
+                  checked={!hasCustomFontMono}
+                  onCheckedChange={handleUseGlobalFontMono}
+                  className="mt-1"
+                />
+                <div className="flex-1 space-y-1.5">
+                  <Label
+                    htmlFor="use-global-font-mono"
+                    className="text-foreground cursor-pointer font-medium"
+                  >
+                    Use Global Code Font
+                  </Label>
+                  {!hasCustomFontMono && (
+                    <p className="text-xs text-muted-foreground">
+                      Currently using:{' '}
+                      <span className="font-medium">{getGlobalFontMonoLabel()}</span>
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {hasCustomFontMono && (
+                <div className="ml-6 space-y-2">
+                  <Label htmlFor="code-font-select" className="text-sm">
+                    Project Code Font
+                  </Label>
+                  <Select value={fontMonoLocal} onValueChange={handleFontMonoChange}>
+                    <SelectTrigger id="code-font-select" className="w-full">
+                      <SelectValue placeholder="Default (Geist Mono)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {UI_MONO_FONT_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          <span
+                            style={{
+                              fontFamily:
+                                option.value === DEFAULT_FONT_VALUE ? undefined : option.value,
+                            }}
+                          >
+                            {option.label}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

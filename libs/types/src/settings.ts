@@ -396,6 +396,10 @@ export interface ProjectRef {
   lastOpened?: string;
   /** Project-specific theme override (or undefined to use global) */
   theme?: string;
+  /** Project-specific UI/sans font override (or undefined to use global) */
+  fontFamilySans?: string;
+  /** Project-specific code/mono font override (or undefined to use global) */
+  fontFamilyMono?: string;
   /** Whether project is pinned to favorites on dashboard */
   isFavorite?: boolean;
   /** Lucide icon name for project identification */
@@ -462,6 +466,14 @@ export interface GlobalSettings {
   // Theme Configuration
   /** Currently selected theme */
   theme: ThemeMode;
+
+  // Font Configuration
+  /** Global UI/Sans font family (undefined = use default Geist Sans) */
+  fontFamilySans?: string;
+  /** Global Code/Mono font family (undefined = use default Geist Mono) */
+  fontFamilyMono?: string;
+  /** Terminal font family (undefined = use default Menlo/Monaco) */
+  terminalFontFamily?: string;
 
   // UI State Preferences
   /** Whether sidebar is currently open */
@@ -717,6 +729,12 @@ export interface ProjectSettings {
   // Theme Configuration (project-specific override)
   /** Project theme (undefined = use global setting) */
   theme?: ThemeMode;
+
+  // Font Configuration (project-specific override)
+  /** UI/Sans font family override (undefined = use default Geist Sans) */
+  fontFamilySans?: string;
+  /** Code/Mono font family override (undefined = use default Geist Mono) */
+  fontFamilyMono?: string;
 
   // Worktree Management
   /** Project-specific worktree preference override */
